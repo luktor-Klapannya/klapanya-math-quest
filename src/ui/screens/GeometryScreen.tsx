@@ -186,7 +186,7 @@ export const GeometryScreen: React.FC<GeometryScreenProps> = ({
         {/* Vector SVG Diagram */}
         {currentQ?.requiresDiagram && (
           <GeometryDiagram
-            type={currentQ.diagramType || 'CUBE_NET'}
+            type={(currentQ.diagramType as any) || 'CUBE_NET'}
             caption={currentQ.subtopic}
           />
         )}

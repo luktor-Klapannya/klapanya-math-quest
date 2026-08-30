@@ -355,7 +355,8 @@ function generateOnetQuestions(): Record<string, QuestionItem[]> {
   return bank;
 }
 
-const ALL_GATEWAY_QUESTIONS = generateOnetQuestions();
+export const ALL_GATEWAY_QUESTIONS = generateOnetQuestions();
+export const ONET_QUESTIONS = ALL_GATEWAY_QUESTIONS;
 
 export function getGatewayQuestions(stageId: string, count?: number): QuestionItem[] {
   const all = ALL_GATEWAY_QUESTIONS[stageId] || ALL_GATEWAY_QUESTIONS['ONET-1'];

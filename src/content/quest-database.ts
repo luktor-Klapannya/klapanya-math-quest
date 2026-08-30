@@ -158,6 +158,7 @@ function generateQuestQuestions(): QuestionItem[] {
 }
 
 export const ALL_QUEST_QUESTIONS = generateQuestQuestions();
+export const QUEST_QUESTIONS = ALL_QUEST_QUESTIONS;
 
 export function getQuestQuestions(groupId?: string, count?: number): QuestionItem[] {
   let list = ALL_QUEST_QUESTIONS;

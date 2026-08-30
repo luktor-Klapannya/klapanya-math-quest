@@ -325,7 +325,8 @@ function generateBossQuestions(): Record<string, QuestionItem[]> {
   return bank;
 }
 
-const ALL_BOSS_QUESTIONS = generateBossQuestions();
+export const ALL_BOSS_QUESTIONS = generateBossQuestions();
+export const BOSS_QUESTIONS = ALL_BOSS_QUESTIONS;
 
 export function getBossQuestions(bossId: string, phaseId?: 'PHASE_1' | 'PHASE_2' | 'PHASE_3' | 'PHASE_4'): QuestionItem[] {
   const all = ALL_BOSS_QUESTIONS[bossId] || ALL_BOSS_QUESTIONS['BOSS-1'];

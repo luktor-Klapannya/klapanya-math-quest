@@ -13,6 +13,8 @@ import { shuffleOptions } from '../../engine/shuffler';
 import { calculateBossDamage, calculateBossPerformanceTier, canForgeLegendaryAdmissionWeapon } from '../../engine/boss-evaluator';
 import { calculateCoinReward, calculateXpReward } from '../../engine/economy';
 import { WeightedSkillMasteryEngineV1 } from '../../progression/mastery-engine';
+import { HeroEmoteState, BossAnimationState, DamagePopupData } from '../../types/combat-animation';
+import { CombatArenaView } from '../components/CombatArenaView';
 import { 
   Shield, 
   Flame, 
@@ -73,6 +75,11 @@ export const BossArenaScreen: React.FC<BossArenaScreenProps> = ({
   const [masteryState, setMasteryState] = useState<Record<string, number>>({ ...profile.skillMastery });
   const [misconceptionCounts, setMisconceptionCounts] = useState<Record<string, number>>({});
 
+  // Combat Animation & Game Feel State
+  const [heroEmote, setHeroEmote] = useState<HeroEmoteState>('IDLE');
+  const [bossAnimState, setBossAnimState] = useState<BossAnimationState>('IDLE');
+  const [damagePopups, setDamagePopups] = useState<DamagePopupData[]>([]);
+
   const questionStartTimeRef = useRef<number>(Date.now());
 
   // Filter questions for active phase
@@ -119,12 +126,27 @@ export const BossArenaScreen: React.FC<BossArenaScreenProps> = ({
       setBossHp((prev) => Math.max(0, prev - damage));
       setTotalDamageDealt((prev) => prev + damage);
       setCorrectCount((prev) => prev + 1);
+      
+      const remainingHpAfterHit = Math.max(0, bossHp - damage);
+
       if (isCritical) {
         setCriticalHits((prev) => prev + 1);
         setFlashFeedback('CRITICAL');
+        setHeroEmote('CRITICAL_ATTACK');
+        setBossAnimState(remainingHpAfterHit <= 0 ? 'DEFEATED' : 'HIT_CRITICAL');
       } else {
         setFlashFeedback('HIT');
+        setHeroEmote('ATTACK');
+        setBossAnimState(remainingHpAfterHit <= 0 ? 'DEFEATED' : 'HIT_LIGHT');
       }
+
+      setDamagePopups([{ id: String(Date.now()), damage, isCritical, x: 0, y: 0 }]);
+
+      setTimeout(() => {
+        setHeroEmote('IDLE');
+        if (remainingHpAfterHit > 0) setBossAnimState('IDLE');
+        setDamagePopups([]);
+      }, 850);
 
       // Rewards & Mastery
       const qCoins = calculateCoinReward(currentQ.rewardCoins, elapsedMs / 1000, currentQ.targetTimeSec, 0, false);
@@ -147,11 +169,11 @@ export const BossArenaScreen: React.FC<BossArenaScreenProps> = ({
       setMasteryState(updated);
 
       // Check for immediate Boss HP Depletion -> Instant Victory
-      const remainingHpAfterHit = Math.max(0, bossHp - damage);
       if (remainingHpAfterHit <= 0) {
+        setBossAnimState('DEFEATED');
         setTimeout(() => {
           completeBattle(true, 0);
-        }, 600);
+        }, 1200);
         return;
       }
     } else {
@@ -159,6 +181,13 @@ export const BossArenaScreen: React.FC<BossArenaScreenProps> = ({
       const newResolve = playerResolve - 1;
       setPlayerResolve(newResolve);
       setFlashFeedback('BLOCKED');
+      setHeroEmote('HIT_SETBACK');
+      setBossAnimState('RAGE');
+
+      setTimeout(() => {
+        setHeroEmote('IDLE');
+        setBossAnimState('IDLE');
+      }, 850);
 
       currentQ.misconceptionTags.forEach((tag) => {
         setMisconceptionCounts((prev) => ({ ...prev, [tag]: (prev[tag] || 0) + 1 }));
@@ -343,6 +372,20 @@ export const BossArenaScreen: React.FC<BossArenaScreenProps> = ({
           </div>
         </div>
       </header>
+
+      {/* Combat Visual Arena */}
+      <CombatArenaView
+        profile={profile}
+        targetName={bossInfo.thaiName}
+        targetMaxHp={bossInfo.maxHp}
+        targetCurrentHp={bossHp}
+        bossId={bossInfo.id}
+        heroEmote={heroEmote}
+        bossState={bossAnimState}
+        damagePopups={damagePopups}
+        onSkipDefeat={() => completeBattle(true, 0)}
+        isExamMode={false}
+      />
 
       {/* Combat Arena Question Box */}
       <main className="frost-card rounded-3xl p-5 md:p-8 flex-1 flex flex-col justify-between my-3 shadow-2xl relative overflow-hidden">

@@ -54,6 +54,11 @@ interface MapScreenProps {
   onEnterFinalTrial: () => void;
   onEnterTopFormCeremony: () => void;
   onOpenInventory: () => void;
+  onOpenMarket?: () => void;
+  onOpenCodex?: (chapterId?: number) => void;
+  onOpenDrillCenter?: () => void;
+  onOpenSkillInventory?: () => void;
+  onOpenStageDetail?: (stageId: string) => void;
   onSelectPet?: (petId: string) => void;
   onChangeHero: () => void;
   onResetProgress: () => void;
@@ -86,6 +91,11 @@ export const MapScreen: React.FC<MapScreenProps> = ({
   onEnterFinalTrial,
   onEnterTopFormCeremony,
   onOpenInventory,
+  onOpenMarket,
+  onOpenCodex,
+  onOpenDrillCenter,
+  onOpenSkillInventory,
+  onOpenStageDetail,
   onSelectPet,
   onChangeHero,
   onResetProgress,
@@ -310,22 +320,49 @@ export const MapScreen: React.FC<MapScreenProps> = ({
             <span>{profile.xp.toLocaleString()} XP</span>
           </div>
 
+          {onOpenMarket && (
+            <button 
+              onClick={onOpenMarket} 
+              className="px-3 py-1.5 rounded-xl bg-amber-950/90 hover:bg-amber-900 text-amber-300 border border-amber-400 flex items-center gap-1 shadow-glow-gold"
+            >
+              <span>🏪</span> ตลาดเวทมนตร์
+            </button>
+          )}
+
+          {onOpenCodex && (
+            <button 
+              onClick={() => onOpenCodex(1)} 
+              className="px-3 py-1.5 rounded-xl bg-purple-950/90 hover:bg-purple-900 text-purple-200 border border-purple-400 flex items-center gap-1 shadow-glow-purple"
+            >
+              <span>📜</span> คัมภีร์สูตรลัด
+            </button>
+          )}
+
+          {onOpenDrillCenter && (
+            <button 
+              onClick={onOpenDrillCenter} 
+              className="px-3 py-1.5 rounded-xl bg-indigo-950/90 hover:bg-indigo-900 text-indigo-200 border border-indigo-400 flex items-center gap-1"
+            >
+              <span>🎯</span> ศูนย์ดริลล์
+            </button>
+          )}
+
           <button 
-            onClick={onOpenInventory} 
-            className="px-3 py-1.5 rounded-xl bg-amber-950/80 hover:bg-amber-900 text-amber-300 border border-amber-400 flex items-center gap-1 shadow-md"
+            onClick={onOpenSkillInventory || onOpenInventory} 
+            className="px-3 py-1.5 rounded-xl bg-cyan-950 hover:bg-cyan-900 text-cyan-300 border border-cyan-400 flex items-center gap-1 shadow-md"
           >
-            <Sword className="w-3.5 h-3.5" /> คลัง & เตาหลอม
+            <Sword className="w-3.5 h-3.5" /> คลัง & สกิล
           </button>
 
           <button 
             onClick={() => setShowTerritoryModal(true)} 
-            className="px-3 py-1.5 rounded-xl bg-cyan-950 hover:bg-cyan-900 text-cyan-300 border border-cyan-400 flex items-center gap-1"
+            className="px-2.5 py-1.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 border border-slate-600 flex items-center gap-1"
           >
-            <Globe className="w-3.5 h-3.5" /> แดน & สัตว์เลี้ยง
+            <Globe className="w-3.5 h-3.5" /> แดน
           </button>
 
           <button onClick={onChangeHero} className="px-2.5 py-1.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 border border-slate-600">
-            เปลี่ยนคลาส
+            เปลี่ยนตัว
           </button>
         </div>
       </header>

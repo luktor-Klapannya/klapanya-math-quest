@@ -145,6 +145,7 @@ function generateGeometryQuestions(): QuestionItem[] {
 }
 
 export const ALL_GEOMETRY_QUESTIONS = generateGeometryQuestions();
+export const GEOMETRY_QUESTIONS = ALL_GEOMETRY_QUESTIONS;
 
 export function getGeometryQuestions(chamberId?: string): QuestionItem[] {
   if (chamberId) {

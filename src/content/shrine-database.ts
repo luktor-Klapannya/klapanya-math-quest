@@ -236,7 +236,8 @@ function generateShrineQuestions(): Record<string, QuestionItem[]> {
   return bank;
 }
 
-const ALL_SHRINE_QUESTIONS = generateShrineQuestions();
+export const ALL_SHRINE_QUESTIONS = generateShrineQuestions();
+export const SHRINE_QUESTIONS = ALL_SHRINE_QUESTIONS;
 
 export function getShrineQuestions(stageId: string, count?: number): QuestionItem[] {
   const all = ALL_SHRINE_QUESTIONS[stageId] || ALL_SHRINE_QUESTIONS.F1;

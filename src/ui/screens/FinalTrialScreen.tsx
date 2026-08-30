@@ -298,7 +298,7 @@ export const FinalTrialScreen: React.FC<FinalTrialScreenProps> = ({
 
         {currentQ?.requiresDiagram && (
           <GeometryDiagram
-            type={currentQ.diagramType || 'CUBE_NET'}
+            type={(currentQ.diagramType as any) || 'CUBE_NET'}
             caption={currentQ.subtopic}
           />
         )}

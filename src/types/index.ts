@@ -139,9 +139,11 @@ export interface QuestionItem {
   rewardXp: number;
   bossDamage?: number;
   requiresDiagram?: boolean;
-  diagramType?: 'CUBE_NET' | 'PARALLEL_ANGLES' | 'SHADED_CIRCLE' | 'CYLINDER_WATER' | 'COMPOSITE_3D' | 'POLYGON_GRID';
+  diagramType?: 'CUBE_NET' | 'PARALLEL_ANGLES' | 'SHADED_CIRCLE' | 'CYLINDER_WATER' | 'COMPOSITE_3D' | 'POLYGON_GRID' | string;
   diagramData?: Record<string, unknown>;
 }
+
+export type Question = QuestionItem;
 
 export interface StageInfo {
   id: string;
@@ -298,14 +300,19 @@ export interface TopFormEligibility {
 export interface PlayerProfile {
   heroId: HeroClassId;
   heroName: string;
+  avatarVisualId?: string;
+  avatarGender?: 'BOY' | 'GIRL';
   currentTerritoryId: TerritoryId;
   activePetId: string;
   level: number;
   xp: number;
   coins: number;
   rank: string;
+  equippedWeaponId?: string;
   unlockedGear: string[];
   materials: Record<string, number>;
+  consumableInventory: Record<string, number>;
+  unlockedSpecialSkills: string[];
   clearedStages: string[];
   stageStars: Record<string, number>;
   stageBestAccuracy: Record<string, number>;
@@ -316,6 +323,8 @@ export interface PlayerProfile {
   isFrostCoreForgeUnlocked: boolean;
   isTopFormUnlocked: boolean;
   trialBestScore: number;
+  dailyQuestStreak: number;
+  dailyQuestLastCompletedDate?: string;
   skillMastery: Record<string, number>;
   activeActiveSkillCooldown: number;
 }

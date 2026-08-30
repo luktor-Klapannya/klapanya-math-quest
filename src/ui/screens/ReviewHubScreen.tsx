@@ -23,6 +23,19 @@ import {
   Play
 } from 'lucide-react';
 
+import { HeroEmoteState, BossAnimationState, DamagePopupData, SoundHookEvent } from '../../types/combat-animation';
+import { WEAPON_PROGRESSION_DATABASE } from '../../progression/weapon-visuals';
+import { CombatArenaView } from '../components/CombatArenaView';
+import { audioEngine, ZONE_MUSIC_DATABASE } from '../../services/audio-service';
+import { AudioSfxEvent, ZoneMusicProfileId } from '../../types/audio';
+import { 
+  calculateEffectiveTimeSec, 
+  STAGE_TIMER_BOUNDS, 
+  DIFFICULTY_MODIFIERS, 
+  QUESTION_TYPE_MODIFIERS 
+} from '../../engine/adaptive-timer-engine';
+import { AdaptiveTimerDisplay } from '../components/AdaptiveTimerDisplay';
+
 interface ReviewHubScreenProps {
   profile: PlayerProfile;
   onNavigate: (screen: string) => void;
@@ -38,7 +51,29 @@ export const ReviewHubScreen: React.FC<ReviewHubScreenProps> = ({
 }) => {
   const [selectedHero, setSelectedHero] = useState<HeroClassId>(profile.heroId);
   const [selectedRankTier, setSelectedRankTier] = useState<number>(profile.isTopFormUnlocked ? 3 : 0);
-  const [reviewTab, setReviewTab] = useState<'NAV' | 'HEROES' | 'GEAR'>('NAV');
+  const [reviewTab, setReviewTab] = useState<'NAV' | 'ANIMATION_LAB' | 'AUDIO_LAB' | 'TIMER_LAB' | 'HEROES' | 'GEAR'>('NAV');
+
+  // Animation Lab State
+  const [labHeroEmote, setLabHeroEmote] = useState<HeroEmoteState>('IDLE');
+  const [labBossState, setLabBossState] = useState<BossAnimationState>('IDLE');
+  const [labBossId, setLabBossId] = useState<string>('BOSS-1');
+  const [labWeaponId, setLabWeaponId] = useState<string>('TRAINING_WEAPON');
+  const [labDamagePopups, setLabDamagePopups] = useState<DamagePopupData[]>([]);
+  const [lastSoundEvent, setLastSoundEvent] = useState<string>('SFX_IDLE');
+
+  // Audio Lab State
+  const [audioSettings, setAudioSettings] = useState(audioEngine.getSettings());
+  const [activeZoneMusic, setActiveZoneMusic] = useState<ZoneMusicProfileId>('TRAINING_DOJO');
+
+  // Timer Lab State
+  const [timerBaseSec, setTimerBaseSec] = useState<number>(30);
+  const [timerDiff, setTimerDiff] = useState<number>(3);
+  const [timerQType, setTimerQType] = useState<string>('MCQ_STANDARD');
+  const [timerStageId, setTimerStageId] = useState<string>('D1');
+  const [timerHasDiagram, setTimerHasDiagram] = useState<boolean>(false);
+  const [timerIsMultiStep, setTimerIsMultiStep] = useState<boolean>(false);
+  const [testSecondsLeft, setTestSecondsLeft] = useState<number>(30);
+  const [testIsPaused, setTestIsPaused] = useState<boolean>(false);
 
   const territory = TERRITORY_DATABASE.FROZEN_ARCTIC;
   const heroInfo = HERO_CLASSES[selectedHero];
@@ -75,8 +110,8 @@ export const ReviewHubScreen: React.FC<ReviewHubScreenProps> = ({
           </div>
         </div>
 
-        <div className="flex items-center gap-2">
-          {(['NAV', 'HEROES', 'GEAR'] as const).map((tab) => (
+        <div className="flex items-center gap-2 flex-wrap">
+          {(['NAV', 'ANIMATION_LAB', 'AUDIO_LAB', 'TIMER_LAB', 'HEROES', 'GEAR'] as const).map((tab) => (
             <button
               key={tab}
               onClick={() => setReviewTab(tab)}
@@ -87,6 +122,9 @@ export const ReviewHubScreen: React.FC<ReviewHubScreenProps> = ({
               }`}
             >
               {tab === 'NAV' && '🧭 แดชบอร์ดนำทาง (Direct Nav)'}
+              {tab === 'ANIMATION_LAB' && '🎬 แอนิเมชัน (Animation Lab)'}
+              {tab === 'AUDIO_LAB' && '🎵 ระบบเสียง (Audio Lab)'}
+              {tab === 'TIMER_LAB' && '⏱️ ตัวจับเวลา (Timer Lab)'}
               {tab === 'HEROES' && '🧙‍♂️ ตรวจสอบฮีโร่ (Hero Evolution)'}
               {tab === 'GEAR' && '🛡️ คลังยุทธภัณฑ์ (Gear Matrix)'}
             </button>
@@ -113,6 +151,81 @@ export const ReviewHubScreen: React.FC<ReviewHubScreenProps> = ({
           </div>
 
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3.5">
+            {/* 0. 2D Avatar Select */}
+            <div className="p-4 rounded-2xl bg-arctic-800 border border-slate-700 hover:border-cyan-400 transition-all flex flex-col justify-between">
+              <div>
+                <span className="text-[10px] font-bold text-cyan-400">NEW LEARNING</span>
+                <h4 className="text-sm font-black text-white">เลือกตัวละคร 2D (Avatar Select)</h4>
+                <p className="text-xs text-slate-400 mt-1">8 ตัวละคร ชาย/หญิง × จอมเวท, อัศวิน, เรนเจอร์, นินจา</p>
+              </div>
+              <button
+                onClick={() => onNavigate('AVATAR_SELECT')}
+                className="mt-3 py-2 px-3 rounded-xl bg-cyan-600 hover:bg-cyan-500 text-white font-bold text-xs flex items-center justify-center gap-1.5"
+              >
+                <Play className="w-3.5 h-3.5" /> เปิด Avatar Select
+              </button>
+            </div>
+
+            {/* 0b. Tutor Room */}
+            <div className="p-4 rounded-2xl bg-arctic-800 border border-slate-700 hover:border-blue-400 transition-all flex flex-col justify-between">
+              <div>
+                <span className="text-[10px] font-bold text-blue-400">TUTOR ROOM</span>
+                <h4 className="text-sm font-black text-white">ห้องติวเข้ม 7 ขั้นตอน (Tutor Room)</h4>
+                <p className="text-xs text-slate-400 mt-1">แนวคิด, หลักการ, สูตรลัด, จุดลวง, ตัวอย่าง, และลองทำ</p>
+              </div>
+              <button
+                onClick={() => onNavigate('TUTOR_ROOM')}
+                className="mt-3 py-2 px-3 rounded-xl bg-blue-600 hover:bg-blue-500 text-white font-bold text-xs flex items-center justify-center gap-1.5"
+              >
+                <Play className="w-3.5 h-3.5" /> เปิด Tutor Room
+              </button>
+            </div>
+
+            {/* 0c. Drill Center */}
+            <div className="p-4 rounded-2xl bg-arctic-800 border border-slate-700 hover:border-purple-400 transition-all flex flex-col justify-between">
+              <div>
+                <span className="text-[10px] font-bold text-purple-400">DRILL CENTER</span>
+                <h4 className="text-sm font-black text-white">ศูนย์ฝึกดริลล์ (Drill Center)</h4>
+                <p className="text-xs text-slate-400 mt-1">Quick, Skill, Trap, Speed, และ Recovery Drills</p>
+              </div>
+              <button
+                onClick={() => onNavigate('DRILL_CENTER')}
+                className="mt-3 py-2 px-3 rounded-xl bg-purple-600 hover:bg-purple-500 text-white font-bold text-xs flex items-center justify-center gap-1.5"
+              >
+                <Play className="w-3.5 h-3.5" /> เปิด Drill Center
+              </button>
+            </div>
+
+            {/* 0d. Stage Detail Preparation */}
+            <div className="p-4 rounded-2xl bg-arctic-800 border border-slate-700 hover:border-cyan-400 transition-all flex flex-col justify-between">
+              <div>
+                <span className="text-[10px] font-bold text-cyan-400">STAGE DETAIL</span>
+                <h4 className="text-sm font-black text-white">หน้าเตรียมตัวก่อนเข้าด่าน (Stage Detail)</h4>
+                <p className="text-xs text-slate-400 mt-1">ติวก่อนเล่น, ดริลล์, ลุยด่าน, และโหมดท้าทาย</p>
+              </div>
+              <button
+                onClick={() => onNavigate('STAGE_DETAIL')}
+                className="mt-3 py-2 px-3 rounded-xl bg-cyan-600 hover:bg-cyan-500 text-white font-bold text-xs flex items-center justify-center gap-1.5"
+              >
+                <Play className="w-3.5 h-3.5" /> เปิด Stage Detail
+              </button>
+            </div>
+
+            {/* 0e. Skill Inventory */}
+            <div className="p-4 rounded-2xl bg-arctic-800 border border-slate-700 hover:border-amber-400 transition-all flex flex-col justify-between">
+              <div>
+                <span className="text-[10px] font-bold text-amber-400">SKILL VAULT</span>
+                <h4 className="text-sm font-black text-white">คลังสกิล & ไอเทม (Skill Inventory)</h4>
+                <p className="text-xs text-slate-400 mt-1">แยกไอเทมใช้งาน, สกิลพิเศษ, อาวุธ, เกราะ, และศิลา</p>
+              </div>
+              <button
+                onClick={() => onNavigate('SKILL_INVENTORY')}
+                className="mt-3 py-2 px-3 rounded-xl bg-amber-600 hover:bg-amber-500 text-slate-950 font-black text-xs flex items-center justify-center gap-1.5"
+              >
+                <Play className="w-3.5 h-3.5" /> เปิด Skill Inventory
+              </button>
+            </div>
+
             {/* 1. Hero Select */}
             <div className="p-4 rounded-2xl bg-arctic-800 border border-slate-700 hover:border-cyan-400 transition-all flex flex-col justify-between">
               <div>
@@ -412,6 +525,484 @@ export const ReviewHubScreen: React.FC<ReviewHubScreenProps> = ({
                 </div>
               </div>
             ))}
+          </div>
+        </div>
+      )}
+
+      {/* TAB 4: Animation & Game Feel Lab */}
+      {reviewTab === 'ANIMATION_LAB' && (
+        <div className="space-y-4">
+          <div className="frost-card rounded-2xl p-4 border-2 border-cyan-400 shadow-glow-cyan flex flex-wrap items-center justify-between gap-3">
+            <div>
+              <h3 className="text-sm font-black text-white flex items-center gap-2">
+                <Sparkles className="w-4 h-4 text-amber-400" /> ห้องทดลองแอนิเมชันและการต่อสู้ (Combat & Game Feel Lab)
+              </h3>
+              <p className="text-xs text-slate-300 mt-0.5">
+                ทดสอบท่าโจมตีฮีโร่, การสวมใส่อาวุธ, ปฏิกิริยาบอสโดนตี, ท่าไม้ตายคริติคอล และฉากปราบมหาบอส
+              </p>
+            </div>
+
+            <div className="px-3 py-1 rounded-xl bg-slate-900 border border-slate-700 text-xs font-mono text-cyan-300">
+              🔊 เสียงล่าสุด: <span className="text-amber-400 font-bold">{lastSoundEvent}</span>
+            </div>
+          </div>
+
+          {/* Live Arena Preview */}
+          <CombatArenaView
+            profile={{ ...previewProfile, equippedWeaponId: labWeaponId }}
+            targetName={labBossId === 'BOSS-1' ? 'มังกรไซเบอร์ฟรอสต์' : labBossId === 'BOSS-2' ? 'โกเลมปรมาจารย์' : labBossId === 'BOSS-3' ? 'มหาจอมเวทศูนย์' : 'หุ่นฝึกซ้อม'}
+            targetMaxHp={1000}
+            targetCurrentHp={labBossState === 'DEFEATED' ? 0 : 750}
+            bossId={labBossId}
+            heroEmote={labHeroEmote}
+            bossState={labBossState}
+            damagePopups={labDamagePopups}
+            onSoundHook={(ev) => setLastSoundEvent(ev)}
+            onSkipDefeat={() => setLabBossState('IDLE')}
+            isExamMode={false}
+          />
+
+          {/* Interactive Control Dashboard */}
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-3">
+            
+            {/* 1. Hero Class & Emote Controls */}
+            <div className="frost-card rounded-2xl p-3.5 border border-slate-700 space-y-2">
+              <span className="font-bold text-xs text-cyan-300 block">1. ท่าทางฮีโร่ (Hero Emote):</span>
+              <div className="grid grid-cols-2 gap-1.5 text-[11px] font-bold">
+                {(['IDLE', 'ATTACK', 'CRITICAL_ATTACK', 'HIT_SETBACK', 'VICTORY', 'LEVEL_UP', 'TOP_FORM'] as const).map((em) => (
+                  <button
+                    key={em}
+                    onClick={() => {
+                      setLabHeroEmote(em);
+                      if (em === 'ATTACK') setLabBossState('HIT_LIGHT');
+                      else if (em === 'CRITICAL_ATTACK') {
+                        setLabBossState('HIT_CRITICAL');
+                        setLabDamagePopups([{ id: String(Date.now()), damage: 350, isCritical: true, x: 0, y: 0 }]);
+                      }
+                    }}
+                    className={`py-1.5 px-2 rounded-xl border transition-all ${
+                      labHeroEmote === em ? 'bg-cyan-500 text-slate-950 font-black shadow-md' : 'bg-slate-900 border-slate-800 text-slate-300 hover:text-white'
+                    }`}
+                  >
+                    {em}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            {/* 2. Boss & Target Reactions */}
+            <div className="frost-card rounded-2xl p-3.5 border border-slate-700 space-y-2">
+              <span className="font-bold text-xs text-rose-300 block">2. ปฏิกิริยาบอส (Boss Reaction):</span>
+              <div className="grid grid-cols-2 gap-1.5 text-[11px] font-bold">
+                {(['IDLE', 'HIT_LIGHT', 'HIT_CRITICAL', 'RAGE', 'PHASE_TRANSITION', 'DEFEATED'] as const).map((bs) => (
+                  <button
+                    key={bs}
+                    onClick={() => setLabBossState(bs)}
+                    className={`py-1.5 px-2 rounded-xl border transition-all ${
+                      labBossState === bs ? 'bg-rose-500 text-slate-950 font-black shadow-md' : 'bg-slate-900 border-slate-800 text-slate-300 hover:text-white'
+                    }`}
+                  >
+                    {bs}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            {/* 3. Boss Model Selection */}
+            <div className="frost-card rounded-2xl p-3.5 border border-slate-700 space-y-2">
+              <span className="font-bold text-xs text-purple-300 block">3. เลือกรุ่นบอส (Boss Model):</span>
+              <div className="space-y-1.5 text-xs font-bold">
+                {[
+                  { id: 'BOSS-1', label: '🐉 Cyber-Frost Dragon' },
+                  { id: 'BOSS-2', label: '🤖 Grandmaster Golem' },
+                  { id: 'BOSS-3', label: '🧙‍♂️ Archmage of Zero' },
+                  { id: 'DOJO_TARGET', label: '🎯 Frost Training Dummy' },
+                ].map((b) => (
+                  <button
+                    key={b.id}
+                    onClick={() => setLabBossId(b.id)}
+                    className={`w-full py-1.5 px-2.5 rounded-xl border text-left transition-all ${
+                      labBossId === b.id ? 'bg-purple-600 text-white font-black shadow-md' : 'bg-slate-900 border-slate-800 text-slate-300'
+                    }`}
+                  >
+                    {b.label}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            {/* 4. Weapon Progression & Equip Test */}
+            <div className="frost-card rounded-2xl p-3.5 border border-slate-700 space-y-2">
+              <span className="font-bold text-xs text-amber-300 block">4. ทดสอบติดตั้งอาวุธ (Weapon Tier):</span>
+              <div className="space-y-1.5 text-xs font-bold">
+                {Object.values(WEAPON_PROGRESSION_DATABASE).map((w) => (
+                  <button
+                    key={w.id}
+                    onClick={() => setLabWeaponId(w.id)}
+                    className={`w-full py-1.5 px-2.5 rounded-xl border text-left transition-all flex items-center justify-between ${
+                      labWeaponId === w.id ? 'bg-amber-500 text-slate-950 font-black shadow-md' : 'bg-slate-900 border-slate-800 text-slate-300'
+                    }`}
+                  >
+                    <span className="truncate">{w.icon} Tier {w.tier}: {w.thaiName}</span>
+                  </button>
+                ))}
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* TAB: Audio Lab */}
+      {reviewTab === 'AUDIO_LAB' && (
+        <div className="space-y-4">
+          <div className="frost-card rounded-2xl p-4 border-2 border-cyan-400 shadow-glow-cyan flex flex-wrap items-center justify-between gap-3">
+            <div>
+              <h3 className="text-sm font-black text-white flex items-center gap-2">
+                <Sparkles className="w-4 h-4 text-amber-400" /> ห้องทดลองระบบเสียงและการปรับแต่ง (Audio & Zone Profiles Lab)
+              </h3>
+              <p className="text-xs text-slate-300 mt-0.5">
+                ทดสอบเพลงประจำโซนทั้ง 8 โซน, ปรับระดับเสียง Master/Music/SFX/UI, ทดสอบ Event SFX
+              </p>
+            </div>
+
+            <div className="flex items-center gap-2">
+              <button
+                onClick={() => {
+                  const updated = audioEngine.saveSettings({ isMuted: !audioSettings.isMuted });
+                  setAudioSettings(updated);
+                }}
+                className={`px-3 py-1.5 rounded-xl text-xs font-bold border transition-all ${
+                  audioSettings.isMuted ? 'bg-rose-600 text-white border-rose-400' : 'bg-slate-800 text-slate-300 border-slate-700'
+                }`}
+              >
+                {audioSettings.isMuted ? '🔇 ปิดเสียงทั้งหมด (Muted)' : '🔊 เปิดเสียง (Unmuted)'}
+              </button>
+            </div>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            {/* 1. Zone Music Profiles */}
+            <div className="frost-card rounded-2xl p-4 border border-slate-700 space-y-3">
+              <span className="font-bold text-xs text-cyan-300 block">1. โปรไฟล์เสียงดนตรีประจำโซน (8 Zone Profiles):</span>
+              <div className="space-y-2">
+                {Object.values(ZONE_MUSIC_DATABASE).map((z) => {
+                  const isActive = activeZoneMusic === z.id;
+                  return (
+                    <div 
+                      key={z.id}
+                      onClick={() => {
+                        setActiveZoneMusic(z.id);
+                        audioEngine.setZoneMusic(z.id);
+                      }}
+                      className={`p-3 rounded-xl border cursor-pointer transition-all ${
+                        isActive
+                          ? 'bg-cyan-950/80 border-cyan-400 ring-2 ring-cyan-400 shadow-glow-cyan'
+                          : 'bg-slate-900 border-slate-800 hover:border-slate-600'
+                      }`}
+                    >
+                      <div className="flex items-center justify-between">
+                        <h4 className="text-xs font-black text-white">{z.thaiName}</h4>
+                        <span className="text-[10px] px-2 py-0.5 rounded-full bg-slate-800 text-amber-300 font-mono font-bold">
+                          {z.tempoBpm} BPM
+                        </span>
+                      </div>
+                      <p className="text-[11px] text-slate-300 mt-1">{z.moodDescription}</p>
+                      <p className="text-[10px] text-cyan-300 mt-0.5">เครื่องดนตรี: {z.instrumentation}</p>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+
+            {/* 2. Volume Controls & SFX Triggers */}
+            <div className="space-y-4">
+              {/* Volume Sliders */}
+              <div className="frost-card rounded-2xl p-4 border border-slate-700 space-y-3">
+                <span className="font-bold text-xs text-amber-300 block">2. ตัวควบคุมระดับเสียง (Volume Sliders):</span>
+                
+                <div className="space-y-2 text-xs">
+                  <div>
+                    <div className="flex justify-between mb-1">
+                      <span>Master Volume:</span>
+                      <span className="font-mono font-bold text-amber-400">{Math.round(audioSettings.masterVolume * 100)}%</span>
+                    </div>
+                    <input
+                      type="range"
+                      min="0"
+                      max="1"
+                      step="0.05"
+                      value={audioSettings.masterVolume}
+                      onChange={(e) => {
+                        const updated = audioEngine.saveSettings({ masterVolume: parseFloat(e.target.value) });
+                        setAudioSettings(updated);
+                      }}
+                      className="w-full accent-amber-400 cursor-pointer"
+                    />
+                  </div>
+
+                  <div>
+                    <div className="flex justify-between mb-1">
+                      <span>Music Volume:</span>
+                      <span className="font-mono font-bold text-cyan-400">{Math.round(audioSettings.musicVolume * 100)}%</span>
+                    </div>
+                    <input
+                      type="range"
+                      min="0"
+                      max="1"
+                      step="0.05"
+                      value={audioSettings.musicVolume}
+                      onChange={(e) => {
+                        const updated = audioEngine.saveSettings({ musicVolume: parseFloat(e.target.value) });
+                        setAudioSettings(updated);
+                      }}
+                      className="w-full accent-cyan-400 cursor-pointer"
+                    />
+                  </div>
+
+                  <div>
+                    <div className="flex justify-between mb-1">
+                      <span>SFX Volume:</span>
+                      <span className="font-mono font-bold text-emerald-400">{Math.round(audioSettings.sfxVolume * 100)}%</span>
+                    </div>
+                    <input
+                      type="range"
+                      min="0"
+                      max="1"
+                      step="0.05"
+                      value={audioSettings.sfxVolume}
+                      onChange={(e) => {
+                        const updated = audioEngine.saveSettings({ sfxVolume: parseFloat(e.target.value) });
+                        setAudioSettings(updated);
+                      }}
+                      className="w-full accent-emerald-400 cursor-pointer"
+                    />
+                  </div>
+                </div>
+              </div>
+
+              {/* SFX Event Triggers */}
+              <div className="frost-card rounded-2xl p-4 border border-slate-700 space-y-3">
+                <span className="font-bold text-xs text-emerald-300 block">3. ทดสอบเสียงเอฟเฟกต์ (SFX Event Hooks):</span>
+                <div className="grid grid-cols-2 gap-2 text-xs font-bold">
+                  {[
+                    { ev: 'SFX_CORRECT', label: '✅ ตอบถูก (Correct)' },
+                    { ev: 'SFX_WRONG', label: '❌ ตอบผิด (Wrong)' },
+                    { ev: 'SFX_CRITICAL', label: '💥 คริติคอล (Critical)' },
+                    { ev: 'SFX_ATTACK', label: '⚔️ โจมตี (Attack)' },
+                    { ev: 'SFX_BOSS_HIT', label: '🛡️ บอสโดนตี (Boss Hit)' },
+                    { ev: 'SFX_BOSS_DEFEAT', label: '👑 ปราบมหาบอส (Boss Defeat)' },
+                    { ev: 'SFX_TOP_FORM', label: '🌟 Top Form จุติ' },
+                    { ev: 'SFX_UI_CLICK', label: '🔘 คลิกปุ่ม (UI Click)' },
+                  ].map((s) => (
+                    <button
+                      key={s.ev}
+                      onClick={() => audioEngine.playSfx(s.ev as AudioSfxEvent)}
+                      className="p-2 rounded-xl bg-slate-900 hover:bg-slate-800 border border-slate-700 text-slate-200 text-left transition-all truncate"
+                    >
+                      {s.label}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* TAB: Timer Lab */}
+      {reviewTab === 'TIMER_LAB' && (
+        <div className="space-y-4">
+          <div className="frost-card rounded-2xl p-4 border-2 border-cyan-400 shadow-glow-cyan flex flex-wrap items-center justify-between gap-3">
+            <div>
+              <h3 className="text-sm font-black text-white flex items-center gap-2">
+                <Sparkles className="w-4 h-4 text-amber-400" /> ห้องทดลองตัวจับเวลาแปรผัน (Adaptive Timer Engine Lab)
+              </h3>
+              <p className="text-xs text-slate-300 mt-0.5">
+                ทดสอบสูตรคำนวณเวลา, ตัวคูณความยาก, โหมดรูปภาพ, การป้องกันโกง และสถานะ Normal / Warning / Critical / Overtime
+              </p>
+            </div>
+
+            <div className="flex items-center gap-2">
+              <AdaptiveTimerDisplay
+                secondsLeft={testSecondsLeft}
+                totalTargetSec={calculateEffectiveTimeSec({
+                  baseTargetTimeSec: timerBaseSec,
+                  difficulty: timerDiff,
+                  questionType: timerQType,
+                  stageId: timerStageId,
+                  requiresDiagram: timerHasDiagram,
+                  isMultiStep: timerIsMultiStep,
+                })}
+                isPaused={testIsPaused}
+                isOvertime={testSecondsLeft <= 0}
+              />
+            </div>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            {/* Interactive Calculator Inputs */}
+            <div className="frost-card rounded-2xl p-4 border border-slate-700 space-y-3">
+              <span className="font-bold text-xs text-cyan-300 block">1. ปรับค่าตัวแปรคำนวณเวลา (Timer Inputs):</span>
+
+              <div className="space-y-3 text-xs">
+                <div>
+                  <div className="flex justify-between mb-1">
+                    <span>Base Target Time (Canonical Q):</span>
+                    <span className="font-mono font-bold text-cyan-300">{timerBaseSec} วินาที</span>
+                  </div>
+                  <input
+                    type="range"
+                    min="5"
+                    max="120"
+                    step="5"
+                    value={timerBaseSec}
+                    onChange={(e) => setTimerBaseSec(parseInt(e.target.value))}
+                    className="w-full accent-cyan-400 cursor-pointer"
+                  />
+                </div>
+
+                <div>
+                  <div className="flex justify-between mb-1">
+                    <span>ระดับความยาก (Difficulty 1-5):</span>
+                    <span className="font-mono font-bold text-amber-400">Level {timerDiff} ({DIFFICULTY_MODIFIERS[timerDiff]}x)</span>
+                  </div>
+                  <div className="flex gap-1.5">
+                    {[1, 2, 3, 4, 5].map((d) => (
+                      <button
+                        key={d}
+                        onClick={() => setTimerDiff(d)}
+                        className={`flex-1 py-1.5 rounded-lg border font-bold ${
+                          timerDiff === d ? 'bg-amber-500 text-slate-950 font-black' : 'bg-slate-900 border-slate-800 text-slate-400'
+                        }`}
+                      >
+                        {d}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                <div>
+                  <label className="block mb-1 font-bold">ประเภทคำถาม (Question Type Modifiers):</label>
+                  <select
+                    value={timerQType}
+                    onChange={(e) => setTimerQType(e.target.value)}
+                    className="w-full p-2 rounded-xl bg-slate-900 border border-slate-700 text-slate-200 text-xs font-bold"
+                  >
+                    {Object.keys(QUESTION_TYPE_MODIFIERS).map((k) => (
+                      <option key={k} value={k}>
+                        {k} ({QUESTION_TYPE_MODIFIERS[k]}x)
+                      </option>
+                    ))}
+                  </select>
+                </div>
+
+                <div>
+                  <label className="block mb-1 font-bold">ด่านเป้าหมาย (Stage Bounds Clamping):</label>
+                  <select
+                    value={timerStageId}
+                    onChange={(e) => setTimerStageId(e.target.value)}
+                    className="w-full p-2 rounded-xl bg-slate-900 border border-slate-700 text-slate-200 text-xs font-bold"
+                  >
+                    {Object.keys(STAGE_TIMER_BOUNDS).map((s) => (
+                      <option key={s} value={s}>
+                        {s} (Min: {STAGE_TIMER_BOUNDS[s].minSec}s, Max: {STAGE_TIMER_BOUNDS[s].maxSec}s)
+                      </option>
+                    ))}
+                  </select>
+                </div>
+
+                <div className="flex items-center gap-4 pt-1">
+                  <label className="flex items-center gap-2 cursor-pointer">
+                    <input
+                      type="checkbox"
+                      checked={timerHasDiagram}
+                      onChange={(e) => setTimerHasDiagram(e.target.checked)}
+                      className="accent-cyan-400"
+                    />
+                    <span>มีรูปเรขาคณิต (Requires Diagram +20%)</span>
+                  </label>
+
+                  <label className="flex items-center gap-2 cursor-pointer">
+                    <input
+                      type="checkbox"
+                      checked={timerIsMultiStep}
+                      onChange={(e) => setTimerIsMultiStep(e.target.checked)}
+                      className="accent-cyan-400"
+                    />
+                    <span>โจทย์หลายขั้นตอน (Multi-step +15%)</span>
+                  </label>
+                </div>
+              </div>
+            </div>
+
+            {/* Calculated Output Breakdown & Live Test Controls */}
+            <div className="space-y-4">
+              <div className="frost-card rounded-2xl p-4 border border-slate-700 space-y-3">
+                <span className="font-bold text-xs text-emerald-300 block">2. ผลลัพธ์เวลาแปรผันสุทธิ (Effective Timer Output):</span>
+                
+                {(() => {
+                  const eff = calculateEffectiveTimeSec({
+                    baseTargetTimeSec: timerBaseSec,
+                    difficulty: timerDiff,
+                    questionType: timerQType,
+                    stageId: timerStageId,
+                    requiresDiagram: timerHasDiagram,
+                    isMultiStep: timerIsMultiStep,
+                  });
+                  const bounds = STAGE_TIMER_BOUNDS[timerStageId] || { minSec: 15, maxSec: 120 };
+
+                  return (
+                    <div className="p-3 rounded-xl bg-slate-950 border border-slate-800 space-y-2 text-xs">
+                      <div className="flex justify-between items-center pb-2 border-b border-slate-800">
+                        <span>เวลาคำนวณสุทธิ (Effective Time):</span>
+                        <span className="text-xl font-black font-mono text-emerald-400">{eff} วินาที</span>
+                      </div>
+                      <div className="text-[11px] text-slate-400 space-y-1">
+                        <div>สูตร: Base ({timerBaseSec}s) × Diff ({DIFFICULTY_MODIFIERS[timerDiff]}x) × Type ({QUESTION_TYPE_MODIFIERS[timerQType]}x) {timerHasDiagram ? '× Diagram (1.2x)' : ''} {timerIsMultiStep ? '× MultiStep (1.15x)' : ''}</div>
+                        <div>ขอบเขตด่าน: Min {bounds.minSec}s - Max {bounds.maxSec}s</div>
+                      </div>
+                    </div>
+                  );
+                })()}
+
+                {/* State Test Buttons */}
+                <div className="pt-2">
+                  <span className="text-[11px] font-bold text-slate-300 block mb-1.5">ทดสอบสถานะ UI ตัวจับเวลา:</span>
+                  <div className="grid grid-cols-3 gap-1.5 text-xs font-bold">
+                    <button
+                      onClick={() => setTestSecondsLeft(30)}
+                      className="p-1.5 rounded-lg bg-cyan-950 text-cyan-300 border border-cyan-500/40"
+                    >
+                      Normal (30s)
+                    </button>
+                    <button
+                      onClick={() => setTestSecondsLeft(10)}
+                      className="p-1.5 rounded-lg bg-amber-950 text-amber-300 border border-amber-500/40"
+                    >
+                      Warning (10s)
+                    </button>
+                    <button
+                      onClick={() => setTestSecondsLeft(4)}
+                      className="p-1.5 rounded-lg bg-rose-950 text-rose-300 border border-rose-500/40"
+                    >
+                      Critical (4s)
+                    </button>
+                    <button
+                      onClick={() => setTestSecondsLeft(0)}
+                      className="p-1.5 rounded-lg bg-purple-950 text-purple-300 border border-purple-500/40"
+                    >
+                      Overtime (0s)
+                    </button>
+                    <button
+                      onClick={() => setTestIsPaused(!testIsPaused)}
+                      className="p-1.5 rounded-lg bg-blue-950 text-blue-300 border border-blue-500/40 col-span-2"
+                    >
+                      {testIsPaused ? '▶️ ยกเลิกหยุดเวลา' : '⏸️ ทดสอบหยุดเวลา (Pause)'}
+                    </button>
+                  </div>
+                </div>
+              </div>
+            </div>
           </div>
         </div>
       )}

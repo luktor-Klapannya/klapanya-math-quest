@@ -363,11 +363,14 @@ function generateDojoQuestions(): Record<string, QuestionItem[]> {
   return bank;
 }
 
-const ALL_DOJO_QUESTIONS = generateDojoQuestions();
+export const ALL_DOJO_QUESTIONS = generateDojoQuestions();
+export const DOJO_QUESTIONS = ALL_DOJO_QUESTIONS;
 
 export function getQuestionsByStage(stageId: string): QuestionItem[] {
   return ALL_DOJO_QUESTIONS[stageId] || ALL_DOJO_QUESTIONS.D1;
 }
+
+export const getDojoQuestions = getQuestionsByStage;
 
 export function getTotalDojoQuestionCount(): number {
   return Object.values(ALL_DOJO_QUESTIONS).reduce((acc, qArr) => acc + qArr.length, 0);
