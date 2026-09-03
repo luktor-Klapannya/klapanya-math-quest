@@ -31,7 +31,7 @@ export class AuthSessionManager {
   }
 
   private constructor() {
-    const metaEnv = typeof import.meta !== 'undefined' ? (import.meta as any)?.env : {};
+    const metaEnv = import.meta.env || {};
     const authModeEnv = resolveAuthMode(metaEnv || {});
     if (authModeEnv === 'supabase') {
       this.currentMode = 'supabase';
