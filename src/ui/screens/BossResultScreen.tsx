@@ -1,3 +1,4 @@
+import {useArcticBackground} from '../backgrounds/useArcticVisual';
 import React from 'react';
 import { BossBattleResult } from '../../types';
 import { GEAR_DATABASE } from '../../progression/gear-matrix';
@@ -25,6 +26,7 @@ export const BossResultScreen: React.FC<BossResultScreenProps> = ({
   result,
   onReturnToMap,
 }) => {
+  const visualStyle=useArcticBackground('victory');
   const unlockedRelicItem = result.unlockedRelic ? GEAR_DATABASE[result.unlockedRelic] : null;
   const prestigeWeapon = GEAR_DATABASE.LEGENDARY_ADMISSION_WEAPON;
 
@@ -39,7 +41,7 @@ export const BossResultScreen: React.FC<BossResultScreenProps> = ({
   const currentBadge = tierBadgeMap[result.performanceTier] || tierBadgeMap.BRONZE;
 
   return (
-    <div className="min-h-screen aurora-bg p-4 md:p-8 flex flex-col justify-center items-center text-slate-100">
+    <div style={visualStyle} className="min-h-screen aurora-bg p-4 md:p-8 flex flex-col justify-center items-center text-slate-100">
       <div className="frost-card rounded-3xl p-6 md:p-10 max-w-2xl w-full border-2 border-rose-500/80 shadow-2xl text-center relative overflow-hidden animate-scale-up">
         {/* Performance Tier Badge */}
         <div className="inline-flex flex-col items-center justify-center mb-3">

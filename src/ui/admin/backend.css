@@ -7,3 +7,7 @@
 .game-backend :focus-visible{outline:3px solid #976326;outline-offset:2px}.game-backend label{display:flex;flex-direction:column;gap:4px;min-width:150px}.game-backend small,.game-backend .note{color:#6e6256}
 .game-backend .table-scroll{overflow:auto;border:1px solid #d7cbbb}.game-backend table{border-collapse:collapse;width:100%;background:#fffefa;white-space:nowrap}.game-backend th,.game-backend td{text-align:left;padding:9px 12px;border-bottom:1px solid #e4dcd1}.game-backend th{background:#ede6db;font-weight:600}.game-backend td{max-width:340px;overflow-wrap:anywhere;white-space:normal}
 .game-backend form{margin:16px 0;padding:16px;border:1px solid #c9bdae;background:#fffefa}.game-backend .fields{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:12px;margin-bottom:12px}.game-backend textarea{width:100%;font-family:monospace}.game-backend [role=alert]{color:#8d2924;padding:10px;border-left:3px solid #8d2924}.game-backend pre{white-space:pre-wrap;overflow-wrap:anywhere}.game-backend .note{margin:10px 0}.game-backend .wide{grid-column:1/-1}
+.game-backend .arctic-visual-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,300px),1fr));gap:16px;margin-top:16px}
+.game-backend .arctic-visual-grid article{padding:16px;border:1px solid #c9bdae;background:#fffefa;border-radius:8px;min-width:0}
+.game-backend .arctic-visual-grid img{width:100%;aspect-ratio:16/9;object-fit:contain;background:#132033;border-radius:4px}
+.game-backend .arctic-visual-grid input{width:100%;min-width:0}.game-backend details{margin-top:24px}

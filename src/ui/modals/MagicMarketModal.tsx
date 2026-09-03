@@ -1,3 +1,4 @@
+import {useArcticBackground} from '../backgrounds/useArcticVisual';
 import React, { useState } from 'react';
 import { PlayerProfile } from '../../types';
 import { MAGIC_MARKET_ITEMS, purchaseMarketItem } from '../../progression/market-database';
@@ -15,6 +16,7 @@ export const MagicMarketModal: React.FC<MagicMarketModalProps> = ({
   onUpdateProfile,
   onClose,
 }) => {
+  const visualStyle=useArcticBackground('market');
   const [purchaseMessage, setPurchaseMessage] = useState<string | null>(null);
   const [isSuccess, setIsSuccess] = useState<boolean>(true);
 
@@ -34,7 +36,7 @@ export const MagicMarketModal: React.FC<MagicMarketModalProps> = ({
 
   return (
     <div className="fixed inset-0 bg-black/85 backdrop-blur-md z-50 flex items-center justify-center p-3 md:p-6 select-none font-sans">
-      <div className="frost-card rounded-3xl p-5 md:p-7 max-w-2xl w-full border-2 border-amber-400 shadow-glow-gold text-slate-100 max-h-[92vh] flex flex-col justify-between overflow-hidden animate-scale-up">
+      <div style={visualStyle} className="frost-card rounded-3xl p-5 md:p-7 max-w-2xl w-full border-2 border-amber-400 shadow-glow-gold text-slate-100 max-h-[92vh] flex flex-col justify-between overflow-hidden animate-scale-up">
         
         {/* Header */}
         <div>

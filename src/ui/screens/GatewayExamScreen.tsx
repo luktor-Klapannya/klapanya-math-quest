@@ -1,3 +1,4 @@
+import {useArcticBackground} from '../backgrounds/useArcticVisual';
 import React, { useState, useEffect, useRef } from 'react';
 import { useGameEvidence } from '../../services/game-evidence';
 import { 
@@ -50,6 +51,7 @@ export const GatewayExamScreen: React.FC<GatewayExamScreenProps> = ({
   onFinishExam: finishExam,
   onExit,
 }) => {
+  const visualStyle=useArcticBackground('onet');
   const evidence = useGameEvidence(stageId,{engine:'GATEWAY_V1',runMode,questionIds:questions.map(q=>q.id)});
   const onFinishExam = (result: GatewayExamResult) => { evidence.finish(result); finishExam(result); };
   const hero = HERO_CLASSES[profile.heroId];
@@ -296,7 +298,7 @@ export const GatewayExamScreen: React.FC<GatewayExamScreenProps> = ({
   const seconds = globalTimeElapsedSec % 60;
 
   return (
-    <div className="min-h-screen aurora-bg p-3 md:p-6 flex flex-col justify-between text-slate-100 max-w-4xl mx-auto select-none">
+    <div style={visualStyle} className="min-h-screen aurora-bg p-3 md:p-6 flex flex-col justify-between text-slate-100 max-w-4xl mx-auto select-none">
       {/* Top Standardized Exam Bar */}
       <header className="frost-card rounded-2xl p-4 flex flex-wrap items-center justify-between gap-3 shadow-lg">
         <div className="flex items-center gap-3">

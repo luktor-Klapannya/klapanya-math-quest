@@ -1,3 +1,4 @@
+import {useArcticVisual} from '../backgrounds/useArcticVisual';
 import React, { useState } from 'react';
 import { 
   PlayerProfile, 
@@ -100,6 +101,7 @@ export const MapScreen: React.FC<MapScreenProps> = ({
   onChangeHero,
   onResetProgress,
 }) => {
+  const mapVisual=useArcticVisual('worldMap');
   const [selectedNodeId, setSelectedNodeId] = useState<ZoneNodeId>('DOJO');
   const [viewMode, setViewMode] = useState<'MAP' | 'DETAIL'>('MAP');
   const [shrineMode, setShrineMode] = useState<ShrineRunMode>('RANKED');
@@ -265,7 +267,7 @@ export const MapScreen: React.FC<MapScreenProps> = ({
       {/* 1. Cinematic Arctic Fantasy Map Background Artwork Layer */}
       <div 
         className="absolute inset-0 bg-cover bg-center bg-no-repeat pointer-events-none z-0 opacity-30 mix-blend-screen scale-105"
-        style={{ backgroundImage: `url('/academy_backdrop.jpg')` }}
+        style={{ backgroundImage: `url("${mapVisual || '/academy_backdrop.jpg'}")` }}
       />
       <div className="absolute inset-0 bg-gradient-to-b from-[#030712]/90 via-[#03203c]/40 to-[#030712]/95 pointer-events-none z-0" />
 

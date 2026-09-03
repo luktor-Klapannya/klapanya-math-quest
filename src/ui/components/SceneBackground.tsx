@@ -1,4 +1,6 @@
 import React, { useState } from 'react';
+import {useArcticVisual} from '../backgrounds/useArcticVisual';
+import type {ArcticSlot} from '../../services/arctic-visual-slots';
 import { 
   TerritoryId, 
   SceneType, 
@@ -21,6 +23,8 @@ export const SceneBackground: React.FC<SceneBackgroundProps> = ({
   className = '',
   children,
 }) => {
+  const slots:Partial<Record<SceneType,ArcticSlot>>={MAP:'worldMap',DOJO:'dojo',FARMING:'farming',ONET:'onet',GEOMETRY:'geometry',QUEST:'quest',BOSS_DRAGON:'citadel1',BOSS:'citadel1',BOSS_GOLEM:'citadel2',BOSS_ARCHMAGE:'citadel3',FINAL:'final',RESULT:'victory'};
+  const uploaded=useArcticVisual(territoryId==='FROZEN_ARCTIC'?slots[sceneType]:undefined);
   const config = {
     ...getSceneBackgroundConfig(territoryId, sceneType),
     ...customConfig,
@@ -32,7 +36,8 @@ export const SceneBackground: React.FC<SceneBackgroundProps> = ({
     <div className={`relative min-h-screen bg-[#030712] overflow-hidden select-none font-sans ${className}`}>
       
       {/* 1. LAYER 1: RESPONSIVE PICTURE LAYER (Desktop 1920x1080, Tablet 1440x1200, Mobile 900x1200) */}
-      {!imageError && (
+      {uploaded && <img src={uploaded} alt="" aria-hidden="true" className="absolute inset-0 w-full h-full object-cover pointer-events-none z-0" style={{opacity:config.backdropOpacity}}/>}
+      {!uploaded && !imageError && (
         <picture className="absolute inset-0 pointer-events-none z-0">
           {/* WebP High-Performance Sources */}
           <source 
@@ -69,7 +74,7 @@ export const SceneBackground: React.FC<SceneBackgroundProps> = ({
       )}
 
       {/* Fallback Image Layer (If asset is missing or still generating) */}
-      {imageError && (
+      {!uploaded && imageError && (
         <div 
           className="absolute inset-0 bg-cover bg-center bg-no-repeat pointer-events-none z-0 mix-blend-screen scale-105"
           style={{ 

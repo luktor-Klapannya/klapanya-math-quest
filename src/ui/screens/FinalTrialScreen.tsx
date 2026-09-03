@@ -1,3 +1,4 @@
+import {useArcticBackground} from '../backgrounds/useArcticVisual';
 import React, { useState, useEffect } from 'react';
 import { useGameEvidence } from '../../services/game-evidence';
 import { 
@@ -39,6 +40,7 @@ export const FinalTrialScreen: React.FC<FinalTrialScreenProps> = ({
   onFinishTrial: finishTrial,
   onExit,
 }) => {
+  const visualStyle=useArcticBackground('final');
   const evidence = useGameEvidence('FINAL_TRIAL',{engine:'FINAL_TRIAL_V1',questionIds:questions.map(q=>q.id)});
   const onFinishTrial = (result: GrandmasterTrialResult) => { evidence.finish(result); finishTrial(result); };
   const masteryEngine = new WeightedSkillMasteryEngineV1();
@@ -238,7 +240,7 @@ export const FinalTrialScreen: React.FC<FinalTrialScreenProps> = ({
   const secs = timeRemainingSec % 60;
 
   return (
-    <div className="min-h-screen aurora-bg p-3 md:p-6 flex flex-col justify-between text-slate-100 max-w-4xl mx-auto select-none">
+    <div style={visualStyle} className="min-h-screen aurora-bg p-3 md:p-6 flex flex-col justify-between text-slate-100 max-w-4xl mx-auto select-none">
       {/* Header */}
       <header className="frost-card rounded-2xl p-4 flex flex-wrap items-center justify-between gap-3 shadow-2xl border-2 border-amber-400/80">
         <div className="flex items-center gap-3">

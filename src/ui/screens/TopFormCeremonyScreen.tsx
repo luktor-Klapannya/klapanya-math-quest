@@ -1,3 +1,4 @@
+import {useArcticBackground} from '../backgrounds/useArcticVisual';
 import React, { useState } from 'react';
 import { PlayerProfile, TopFormEligibility } from '../../types';
 import { GEAR_DATABASE } from '../../progression/gear-matrix';
@@ -14,6 +15,7 @@ export const TopFormCeremonyScreen: React.FC<TopFormCeremonyScreenProps> = ({
   eligibility,
   onReturnToMap,
 }) => {
+  const visualStyle=useArcticBackground('victory');
   const [stageStep, setStageStep] = useState<number>(3); // 1: Entrance, 2: Transformation, 3: Coronation (default complete with skip/replay)
 
   const armor = GEAR_DATABASE.MYTHIC_ARCTIC_ARMOR;
@@ -21,7 +23,7 @@ export const TopFormCeremonyScreen: React.FC<TopFormCeremonyScreenProps> = ({
   const halo = GEAR_DATABASE.ARCTIC_SOVEREIGN_HALO;
 
   return (
-    <div className="min-h-screen aurora-bg p-4 md:p-8 flex flex-col justify-center items-center text-slate-100 select-none">
+    <div style={visualStyle} className="min-h-screen aurora-bg p-4 md:p-8 flex flex-col justify-center items-center text-slate-100 select-none">
       <div className="frost-card rounded-3xl p-6 md:p-10 max-w-2xl w-full border-4 border-amber-400 shadow-glow-gold text-center relative overflow-hidden animate-scale-up">
         {/* Skip & Replay Controls */}
         <div className="absolute top-4 right-4 flex items-center gap-2 z-30">

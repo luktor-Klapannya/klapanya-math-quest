@@ -1,3 +1,4 @@
+import {useArcticBackground} from '../backgrounds/useArcticVisual';
 import React from 'react';
 import { ShrineRunResult } from '../../types';
 import { GEAR_DATABASE } from '../../progression/gear-matrix';
@@ -26,6 +27,7 @@ export const ShrineResultScreen: React.FC<ShrineResultScreenProps> = ({
   onReturnToMap,
   onPlayAgain,
 }) => {
+  const visualStyle=useArcticBackground('victory');
   const droppedItem = result.earnedMaterial ? GEAR_DATABASE[result.earnedMaterial] : null;
 
   const gradeColorMap: Record<string, { bg: string; text: string; label: string }> = {
@@ -39,7 +41,7 @@ export const ShrineResultScreen: React.FC<ShrineResultScreenProps> = ({
   const currentGradeStyle = gradeColorMap[result.speedGrade] || gradeColorMap.C;
 
   return (
-    <div className="min-h-screen aurora-bg p-4 md:p-8 flex flex-col justify-center items-center text-slate-100">
+    <div style={visualStyle} className="min-h-screen aurora-bg p-4 md:p-8 flex flex-col justify-center items-center text-slate-100">
       <div className="frost-card rounded-3xl p-6 md:p-10 max-w-2xl w-full border-2 border-cyan-400/80 shadow-glow-cyan text-center relative overflow-hidden animate-scale-up">
         {/* Speed Grade Emblem */}
         <div className="flex flex-col items-center justify-center my-2">

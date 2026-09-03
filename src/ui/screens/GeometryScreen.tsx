@@ -1,3 +1,4 @@
+import {useArcticBackground} from '../backgrounds/useArcticVisual';
 import React, { useState, useEffect } from 'react';
 import { PlayerProfile, QuestionItem, QuestionOption, StageSessionResult } from '../../types';
 import { HERO_CLASSES } from '../../progression/hero-classes';
@@ -30,6 +31,7 @@ export const GeometryScreen: React.FC<GeometryScreenProps> = ({
   onFinishSession,
   onExit,
 }) => {
+  const visualStyle=useArcticBackground('geometry');
   const hero = HERO_CLASSES[profile.heroId];
   const masteryEngine = new WeightedSkillMasteryEngineV1();
 
@@ -124,7 +126,7 @@ export const GeometryScreen: React.FC<GeometryScreenProps> = ({
   };
 
   return (
-    <div className="min-h-screen aurora-bg p-3 md:p-6 flex flex-col justify-between text-slate-100 max-w-4xl mx-auto select-none">
+    <div style={visualStyle} className="min-h-screen aurora-bg p-3 md:p-6 flex flex-col justify-between text-slate-100 max-w-4xl mx-auto select-none">
       {/* Header */}
       <header className="frost-card rounded-2xl p-4 flex flex-wrap items-center justify-between gap-3 shadow-lg">
         <div className="flex items-center gap-3">

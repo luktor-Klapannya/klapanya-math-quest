@@ -1,3 +1,4 @@
+import {useArcticBackground} from '../backgrounds/useArcticVisual';
 import React, { useState, useEffect, useRef } from 'react';
 import { useGameEvidence } from '../../services/game-evidence';
 import { 
@@ -50,6 +51,7 @@ export const BossArenaScreen: React.FC<BossArenaScreenProps> = ({
   onFinishBattle: finishBattle,
   onExit,
 }) => {
+  const visualStyle=useArcticBackground(bossInfo.id==='BOSS-1'?'citadel1':bossInfo.id==='BOSS-2'?'citadel2':'citadel3');
   const evidence = useGameEvidence(bossInfo.id,{engine:'BOSS_V1',mode,initialPhaseId,questionIds:questions.map(q=>q.id)});
   const onFinishBattle = (result: BossBattleResult) => { evidence.finish(result); finishBattle(result); };
   const hero = HERO_CLASSES[profile.heroId];
@@ -306,7 +308,7 @@ export const BossArenaScreen: React.FC<BossArenaScreenProps> = ({
   const hpRatio = Math.max(0, bossHp / bossInfo.maxHp);
 
   return (
-    <div className="min-h-screen aurora-bg p-3 md:p-6 flex flex-col justify-between text-slate-100 max-w-4xl mx-auto select-none">
+    <div style={visualStyle} className="min-h-screen aurora-bg p-3 md:p-6 flex flex-col justify-between text-slate-100 max-w-4xl mx-auto select-none">
       {/* Top Boss HUD & HP Bar */}
       <header className="frost-card rounded-2xl p-4 shadow-2xl relative overflow-hidden border-2 border-rose-500/60">
         <div className="flex flex-wrap items-center justify-between gap-3 mb-2">

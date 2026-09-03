@@ -1,3 +1,4 @@
+import {useArcticBackground} from '../backgrounds/useArcticVisual';
 import React from 'react';
 import { StageSessionResult } from '../../types';
 import { GEAR_DATABASE } from '../../progression/gear-matrix';
@@ -22,10 +23,11 @@ export const ResultScreen: React.FC<ResultScreenProps> = ({
   result,
   onReturnToMap,
 }) => {
+  const visualStyle=useArcticBackground('victory');
   const unlockedGearItem = result.unlockedGear ? GEAR_DATABASE[result.unlockedGear] : null;
 
   return (
-    <div className="min-h-screen aurora-bg p-4 md:p-8 flex flex-col justify-center items-center text-slate-100">
+    <div style={visualStyle} className="min-h-screen aurora-bg p-4 md:p-8 flex flex-col justify-center items-center text-slate-100">
       <div className="frost-card rounded-3xl p-6 md:p-10 max-w-2xl w-full border-2 border-cyan-400/80 shadow-glow-cyan text-center relative overflow-hidden animate-scale-up">
         {/* Banner Status */}
         <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-cyan-950/80 border border-cyan-400 text-cyan-300 text-xs font-bold uppercase tracking-wider mb-4 shadow-sm">

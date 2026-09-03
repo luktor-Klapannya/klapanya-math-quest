@@ -43,7 +43,7 @@ try {
   const migrations = [
     '001_auth_profiles.sql','002_roles_permissions.sql','003_memberships_enrollments.sql',
     '004_rls_policies.sql','005_seed_dev.sql','006_arena_realtime.sql',
-    '007_game_identity_persistence.sql','008_game_arena_security.sql','009_game_arena_submission.sql','010_game_campaign_verification.sql','011_backend_workspace.sql','012_backend_pilot_operations.sql',
+    '007_game_identity_persistence.sql','008_game_arena_security.sql','009_game_arena_submission.sql','010_game_campaign_verification.sql','011_backend_workspace.sql','012_backend_pilot_operations.sql','013_arctic_visual_configuration.sql',
   ];
   for (const file of migrations) {
     const sql = await readFile(new URL(`../supabase/migrations/${file}`,import.meta.url),'utf8');
@@ -226,5 +226,24 @@ try {
   check((await db.query('SELECT * FROM classroom_enrollments WHERE learner_profile_id=$1',[pilot])).rows.length===1,'Pilot profile and enrollment created atomically');
   for(const actor of [1,2,6,7])check((await as(actor,'SELECT * FROM game_admin_operations')).length===0,`Actor ${actor} cannot read Admin operation journal`);
   await denied(5,"INSERT INTO game_admin_operations(id,organization_id,actor_id,action,fingerprint) VALUES($1,'ORG_KLAPANYA',$2,'provision','forged')",[uuid(91),profile(5)],'Browser cannot forge operation journal');
+
+  await as(5,"INSERT INTO game_arctic_configuration(organization_id,title) VALUES ('ORG_KLAPANYA','Arctic')");
+  for(const actor of [1,2,3,5,6])check((await as(actor,'SELECT * FROM game_arctic_configuration')).length===1,'Active same-organization player reads Arctic '+actor);
+  check((await as(7,'SELECT * FROM game_arctic_configuration')).length===0,'Cross-organization Arctic read denied');
+  await denied(null,'SELECT * FROM game_arctic_configuration',[],'Anonymous Arctic read denied','anon');
+  for(const actor of [1,2,6,7]){
+    check((await as(actor,"UPDATE game_arctic_configuration SET title='Forged' RETURNING organization_id")).length===0,'Non-admin Arctic edits denied '+actor);
+    await denied(actor,"INSERT INTO storage.objects(bucket_id,name) VALUES ('game-arctic-visuals','ORG_KLAPANYA/abcd.png')",[],'Non-admin visual upload denied '+actor);
+  }
+  await as(5,"UPDATE game_arctic_configuration SET visuals=$1 WHERE organization_id='ORG_KLAPANYA' AND version=1",[{worldMap:'ORG_KLAPANYA/abcd.png'}]);
+  check((await as(5,"UPDATE game_arctic_configuration SET title='Stale' WHERE version=1 RETURNING organization_id")).length===0,'Arctic stale overwrite denied');
+  for(const visuals of [{questionIds:[]},{dojo:'OTHER/abcd.png'},{worldMap:'https://evil.example/x.png'},{worldMap:'ORG_KLAPANYA/../x.png'}])await denied(5,'UPDATE game_arctic_configuration SET visuals=$1',[visuals],'Unsafe visual metadata rejected');
+  await as(5,"INSERT INTO storage.objects(bucket_id,name) VALUES ('game-arctic-visuals','ORG_KLAPANYA/abcd.png')");
+  check((await as(2,"SELECT * FROM storage.objects WHERE bucket_id='game-arctic-visuals'")).length===1,'Student can resolve own organization image');
+  check((await as(7,"SELECT * FROM storage.objects WHERE bucket_id='game-arctic-visuals'")).length===0,'Other organization cannot resolve image');
+  check((await as(5,"UPDATE storage.objects SET name='ORG_KLAPANYA/abcd.jpg' WHERE bucket_id='game-arctic-visuals' RETURNING id")).length===0,'Visual objects are immutable; replace uses new path');
+  await db.query("UPDATE profiles SET status='DISABLED' WHERE id=$1",[profile(5)]);
+  check((await as(5,'SELECT * FROM game_arctic_configuration')).length===0,'Disabled admin cannot read Arctic');
+  check((await as(5,"UPDATE game_arctic_configuration SET title='Disabled' RETURNING organization_id")).length===0,'Disabled admin cannot edit Arctic');
   console.log(`Database/RLS: ${passed} passed. Realtime and Storage delivery are not exercised by PGlite.`);
 } finally { await db.close(); }
