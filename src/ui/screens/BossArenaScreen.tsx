@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
+import { useGameEvidence } from '../../services/game-evidence';
 import { 
   PlayerProfile, 
   QuestionItem, 
@@ -14,6 +15,7 @@ import { calculateBossDamage, calculateBossPerformanceTier, canForgeLegendaryAdm
 import { calculateCoinReward, calculateXpReward } from '../../engine/economy';
 import { WeightedSkillMasteryEngineV1 } from '../../progression/mastery-engine';
 import { HeroEmoteState, BossAnimationState, DamagePopupData } from '../../types/combat-animation';
+import { audioEngine } from '../../services/audio-service';
 import { CombatArenaView } from '../components/CombatArenaView';
 import { 
   Shield, 
@@ -45,9 +47,11 @@ export const BossArenaScreen: React.FC<BossArenaScreenProps> = ({
   mode,
   questions,
   profile,
-  onFinishBattle,
+  onFinishBattle: finishBattle,
   onExit,
 }) => {
+  const evidence = useGameEvidence(bossInfo.id,{engine:'BOSS_V1',mode,initialPhaseId,questionIds:questions.map(q=>q.id)});
+  const onFinishBattle = (result: BossBattleResult) => { evidence.finish(result); finishBattle(result); };
   const hero = HERO_CLASSES[profile.heroId];
   const masteryEngine = new WeightedSkillMasteryEngineV1();
 
@@ -112,6 +116,7 @@ export const BossArenaScreen: React.FC<BossArenaScreenProps> = ({
     setSelectedOptionId(option.id);
 
     const elapsedMs = Math.max(100, Date.now() - questionStartTimeRef.current);
+    evidence.record({ questionId:currentQ.id, selectedOptionId:option.id, timeSpentSec:elapsedMs / 1000, hintLevelUsed:0 });
     const isCorrect = option.isCorrect === true;
 
     if (isCorrect) {
@@ -183,6 +188,7 @@ export const BossArenaScreen: React.FC<BossArenaScreenProps> = ({
       setFlashFeedback('BLOCKED');
       setHeroEmote('HIT_SETBACK');
       setBossAnimState('RAGE');
+      audioEngine.playSfx('SFX_WRONG');
 
       setTimeout(() => {
         setHeroEmote('IDLE');

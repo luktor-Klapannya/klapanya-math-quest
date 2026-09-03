@@ -63,9 +63,10 @@ export const StageDetailScreen: React.FC<StageDetailScreenProps> = ({
       <div className="flex items-center justify-between mb-4">
         <button
           onClick={onBack}
-          className="px-3.5 py-2 rounded-xl bg-slate-800/80 hover:bg-slate-700 text-slate-300 hover:text-white flex items-center gap-1.5 text-xs font-bold border border-slate-700 transition-all"
+          className="px-4 py-2.5 rounded-2xl bg-slate-800 hover:bg-slate-700 text-white flex items-center gap-2 text-xs md:text-sm font-bold border-2 border-cyan-400/60 shadow-glow-cyan transition-all transform hover:scale-105"
         >
-          <ArrowLeft className="w-4 h-4" /> กลับสู่แผนที่หลัก
+          <ArrowLeft className="w-4 h-4 md:w-5 md:h-5 text-cyan-400" />
+          <span>🏠 กลับสู่แผนที่หลัก (Back to Map)</span>
         </button>
 
         <span className="text-xs text-cyan-300 font-bold px-3 py-1 rounded-xl bg-cyan-950/80 border border-cyan-500/40">

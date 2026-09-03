@@ -3,6 +3,7 @@ import { PlayerProfile, HeroClassId } from '../../types';
 import { AvatarVisualId, AvatarGender } from '../../types/learning';
 import { AVATAR_DATABASE } from '../../progression/avatar-database';
 import { HERO_CLASSES } from '../../progression/hero-classes';
+import { HeroCharacterArt } from '../components/HeroCharacterArt';
 import { Sparkles, User, Shield, Zap, Sword, ChevronRight, Check } from 'lucide-react';
 
 interface AvatarHeroSelectScreenProps {
@@ -13,17 +14,21 @@ interface AvatarHeroSelectScreenProps {
     gender: AvatarGender,
     heroName: string
   ) => Promise<void>;
+  onBack?: () => void;
 }
 
 export const AvatarHeroSelectScreen: React.FC<AvatarHeroSelectScreenProps> = ({
   currentProfile,
   onConfirmCharacter,
+  onBack,
 }) => {
   const [selectedAvatarId, setSelectedAvatarId] = useState<AvatarVisualId>(
     (currentProfile.avatarVisualId as AvatarVisualId) || 'BOY_WIZARD'
   );
   const [genderFilter, setGenderFilter] = useState<'ALL' | 'BOY' | 'GIRL'>('ALL');
   const [heroName, setHeroName] = useState<string>(currentProfile.heroName || 'ผู้กล้าคณิตศาสตร์');
+  const [nameError, setNameError] = useState<string>('');
+  const [isSubmitting, setIsSubmitting] = useState<boolean>(false);
 
   const selectedAvatar = AVATAR_DATABASE[selectedAvatarId] || AVATAR_DATABASE.BOY_WIZARD;
   const canonicalHero = HERO_CLASSES[selectedAvatar.recommendedHeroClass];
@@ -39,17 +44,27 @@ export const AvatarHeroSelectScreen: React.FC<AvatarHeroSelectScreenProps> = ({
   };
 
   const handleConfirm = async () => {
-    const nameToSave = heroName.trim() || selectedAvatar.thaiName;
-    await onConfirmCharacter(
-      selectedAvatar.recommendedHeroClass,
-      selectedAvatar.id,
-      selectedAvatar.gender,
-      nameToSave
-    );
+    const trimmed = heroName.trim();
+    if (trimmed.length < 2) {
+      setNameError('กรุณากรอกชื่อผู้กล้า/นักเรียนอย่างน้อย 2 ตัวอักษร');
+      return;
+    }
+    setNameError('');
+    setIsSubmitting(true);
+    try {
+      await onConfirmCharacter(
+        selectedAvatar.recommendedHeroClass,
+        selectedAvatar.id,
+        selectedAvatar.gender,
+        trimmed
+      );
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   return (
-    <div className="min-h-screen aurora-bg p-4 md:p-8 flex flex-col justify-between text-slate-100 max-w-6xl mx-auto select-none font-sans">
+    <div className="min-h-screen aurora-bg p-4 md:p-8 flex flex-col justify-between text-slate-100 max-w-6xl mx-auto font-sans">
       {/* Top Header */}
       <header className="frost-card rounded-3xl p-5 mb-4 flex flex-wrap items-center justify-between gap-4 border border-cyan-500/40 shadow-glow-cyan">
         <div className="flex items-center gap-3">
@@ -108,31 +123,38 @@ export const AvatarHeroSelectScreen: React.FC<AvatarHeroSelectScreenProps> = ({
             <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
               {filteredAvatars.map((av) => {
                 const isSelected = selectedAvatarId === av.id;
+                const heroClassData = HERO_CLASSES[av.recommendedHeroClass];
                 return (
                   <button
                     key={av.id}
                     onClick={() => handleSelect(av.id)}
-                    className={`p-3.5 rounded-2xl border text-center transition-all flex flex-col items-center justify-between group ${
+                    className={`relative p-2.5 rounded-2xl border text-center transition-all flex flex-col items-center justify-between group overflow-hidden ${
                       isSelected
-                        ? 'bg-cyan-950/90 border-cyan-400 ring-2 ring-cyan-400 shadow-glow-cyan scale-102'
-                        : 'bg-arctic-900/80 border-slate-800 hover:border-slate-600'
+                        ? 'bg-gradient-to-b from-cyan-950/90 to-slate-900 border-2 border-cyan-400 ring-2 ring-cyan-400/50 shadow-glow-cyan scale-[1.02]'
+                        : 'bg-arctic-900/90 border-slate-800 hover:border-cyan-500/50 hover:bg-arctic-800/80'
                     }`}
                   >
-                    <div className="relative mb-2">
-                      <div className="w-16 h-16 rounded-2xl bg-arctic-950 border border-slate-700 flex items-center justify-center text-4xl group-hover:scale-110 transition-transform shadow-inner">
-                        {av.avatarSprite}
-                      </div>
+                    {/* 3/4-Body RPG Character Art (Occupies ~65% of card) */}
+                    <div className="relative w-full h-32 sm:h-36 flex items-center justify-center overflow-hidden rounded-xl bg-gradient-to-b from-slate-900/60 to-arctic-950/90 border border-slate-800/80 group-hover:scale-105 transition-transform duration-200">
+                      <HeroCharacterArt avatarId={av.id} role="HERO_CARD_ART" size="card" />
+                      
+                      {/* Gender Badge Overlay */}
+                      <span className="absolute top-1.5 left-1.5 text-[9px] font-black px-1.5 py-0.5 rounded-md bg-slate-950/80 border border-slate-700 text-cyan-300">
+                        {av.gender === 'BOY' ? '👦 ชาย' : '👧 หญิง'}
+                      </span>
+
                       {isSelected && (
-                        <div className="absolute -top-1.5 -right-1.5 w-5 h-5 rounded-full bg-cyan-400 text-slate-950 flex items-center justify-center shadow-md">
+                        <div className="absolute top-1.5 right-1.5 w-5 h-5 rounded-full bg-cyan-400 text-slate-950 flex items-center justify-center shadow-md">
                           <Check className="w-3.5 h-3.5 stroke-[3]" />
                         </div>
                       )}
                     </div>
 
-                    <div>
-                      <h4 className="text-xs font-black text-white">{av.thaiName}</h4>
-                      <span className="text-[10px] text-cyan-300 font-semibold block mt-0.5">
-                        {HERO_CLASSES[av.recommendedHeroClass].name}
+                    {/* Card Title & Class Name */}
+                    <div className="w-full pt-2">
+                      <h4 className="text-xs font-black text-white truncate">{av.thaiName}</h4>
+                      <span className="text-[10px] font-bold text-amber-300 block truncate mt-0.5">
+                        ⚔️ {heroClassData.name}
                       </span>
                     </div>
                   </button>
@@ -142,20 +164,39 @@ export const AvatarHeroSelectScreen: React.FC<AvatarHeroSelectScreenProps> = ({
           </div>
 
           {/* Student Name Input */}
-          <div className="mt-4 pt-4 border-t border-slate-800 flex items-center gap-3">
-            <User className="w-5 h-5 text-cyan-400 shrink-0" />
-            <div className="flex-1">
-              <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block mb-1">
-                ชื่อผู้กล้า / นักเรียน (Student Name)
-              </label>
-              <input
-                type="text"
-                value={heroName}
-                onChange={(e) => setHeroName(e.target.value)}
-                placeholder="พิมพ์ชื่อของคุณ..."
-                className="w-full px-3.5 py-2.5 rounded-xl bg-arctic-950 border border-slate-700 focus:border-cyan-400 text-sm text-white placeholder-slate-500 outline-none font-bold"
-              />
+          <div className="mt-4 pt-4 border-t border-slate-800 space-y-1.5">
+            <div className="flex items-center gap-3">
+              <User className="w-5 h-5 text-cyan-400 shrink-0" />
+              <div className="flex-1">
+                <div className="flex items-center justify-between mb-1">
+                  <label htmlFor="student-hero-name-input" className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">
+                    ชื่อผู้กล้า / นักเรียน (Student Name)
+                  </label>
+                  <span className="text-[10px] text-slate-500 font-mono">
+                    {heroName.length}/50
+                  </span>
+                </div>
+                <input
+                  id="student-hero-name-input"
+                  type="text"
+                  value={heroName}
+                  onChange={(e) => {
+                    setHeroName(e.target.value);
+                    if (nameError) setNameError('');
+                  }}
+                  maxLength={50}
+                  autoComplete="off"
+                  placeholder="พิมพ์ชื่อของคุณ (เช่น น้องกล้าหาญ, Alex)..."
+                  className="w-full px-3.5 py-2.5 rounded-xl bg-white text-slate-900 placeholder:text-slate-400 caret-cyan-600 border border-slate-300 focus:border-cyan-500 focus:ring-2 focus:ring-cyan-200 outline-none font-bold text-sm select-text cursor-text pointer-events-auto shadow-sm"
+                />
+              </div>
             </div>
+
+            {nameError && (
+              <p className="text-xs text-rose-400 font-bold pl-8 animate-shake">
+                ⚠️ {nameError}
+              </p>
+            )}
           </div>
         </div>
 
@@ -171,12 +212,12 @@ export const AvatarHeroSelectScreen: React.FC<AvatarHeroSelectScreenProps> = ({
               </span>
             </div>
 
-            <div className="text-center my-3">
-              <div className="w-20 h-20 rounded-3xl bg-arctic-950 border-2 border-cyan-400 flex items-center justify-center text-5xl mx-auto shadow-glow-cyan">
-                {selectedAvatar.avatarSprite}
+            <div className="text-center my-2">
+              <div className="w-40 h-40 sm:w-48 sm:h-48 md:w-56 md:h-56 rounded-3xl bg-gradient-to-b from-cyan-950/60 to-slate-950 border-2 border-cyan-400/80 flex items-center justify-center mx-auto shadow-glow-cyan overflow-hidden p-2">
+                <HeroCharacterArt avatarId={selectedAvatar.id} role="FULL_BODY_ART" size="xl" animate />
               </div>
               <h3 className="text-base font-black text-white mt-2">{selectedAvatar.thaiName}</h3>
-              <p className="text-xs text-slate-300 mt-1 leading-relaxed">{selectedAvatar.description}</p>
+              <p className="text-xs text-slate-300 mt-0.5 leading-relaxed">{selectedAvatar.description}</p>
             </div>
 
             {/* Special Skill Box */}

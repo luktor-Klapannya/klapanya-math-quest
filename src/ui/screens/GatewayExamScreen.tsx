@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
+import { useGameEvidence } from '../../services/game-evidence';
 import { 
   PlayerProfile, 
   QuestionItem, 
@@ -46,9 +47,11 @@ export const GatewayExamScreen: React.FC<GatewayExamScreenProps> = ({
   runMode,
   questions,
   profile,
-  onFinishExam,
+  onFinishExam: finishExam,
   onExit,
 }) => {
+  const evidence = useGameEvidence(stageId,{engine:'GATEWAY_V1',runMode,questionIds:questions.map(q=>q.id)});
+  const onFinishExam = (result: GatewayExamResult) => { evidence.finish(result); finishExam(result); };
   const hero = HERO_CLASSES[profile.heroId];
   const masteryEngine = new WeightedSkillMasteryEngineV1();
 
@@ -180,6 +183,7 @@ export const GatewayExamScreen: React.FC<GatewayExamScreenProps> = ({
 
     questions.forEach((q, idx) => {
       const rec = finalAnswers[idx];
+      evidence.record({ questionId:q.id, selectedOptionId:rec?.selectedOptionId, numericalInput:rec?.numericalInput, timeSpentSec:rec?.timeSpentSec || 0, hintLevelUsed:0 });
       if (rec?.isMarkedForReview) markedCount++;
 
       let isQCorrect = false;

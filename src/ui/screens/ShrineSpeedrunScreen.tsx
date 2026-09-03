@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
+import { useGameEvidence } from '../../services/game-evidence';
 import { 
   PlayerProfile, 
   QuestionItem, 
@@ -12,6 +13,7 @@ import { shuffleOptions } from '../../engine/shuffler';
 import { calculateSpeedGrade, getComboMilestone, calculateShrineDrop } from '../../engine/speedrun-evaluator';
 import { calculateCoinReward, calculateXpReward } from '../../engine/economy';
 import { WeightedSkillMasteryEngineV1 } from '../../progression/mastery-engine';
+import { audioEngine } from '../../services/audio-service';
 import { 
   Zap, 
   Flame, 
@@ -21,6 +23,7 @@ import {
   CheckCircle2, 
   RotateCcw
 } from 'lucide-react';
+import { SceneBackground } from '../components/SceneBackground';
 
 interface ShrineSpeedrunScreenProps {
   stageId: string;
@@ -42,9 +45,11 @@ export const ShrineSpeedrunScreen: React.FC<ShrineSpeedrunScreenProps> = ({
   runSize,
   questions,
   profile,
-  onFinishRun,
+  onFinishRun: finishRun,
   onExit,
 }) => {
+  const evidence = useGameEvidence(stageId,{engine:'SHRINE_V1',runMode,runSize,questionIds:questions.map(q=>q.id)});
+  const onFinishRun = (result: ShrineRunResult) => { evidence.finish(result); finishRun(result); };
   const hero = HERO_CLASSES[profile.heroId];
   const masteryEngine = new WeightedSkillMasteryEngineV1();
 
@@ -123,10 +128,12 @@ export const ShrineSpeedrunScreen: React.FC<ShrineSpeedrunScreenProps> = ({
   // Handle Timeout
   const handleTimeout = () => {
     if (isAnsweringLocked) return;
+    evidence.record({questionId:currentQ.id,selectedOptionId:null,timeSpentSec:targetTimeSec,hintLevelUsed:0});
     setIsAnsweringLocked(true);
     setTimeouts((prev) => prev + 1);
     setFlashFeedback('TIMEOUT');
     setCurrentCombo(0);
+    audioEngine.playSfx('SFX_WRONG');
 
     setResponseTimesMs((prev) => [...prev, targetTimeSec * 1000]);
 
@@ -154,6 +161,7 @@ export const ShrineSpeedrunScreen: React.FC<ShrineSpeedrunScreenProps> = ({
     setSelectedOptionId(option.id);
 
     const elapsedMs = Math.max(50, Date.now() - questionStartTimeRef.current);
+    evidence.record({ questionId:currentQ.id, selectedOptionId:option.id, timeSpentSec:elapsedMs / 1000, hintLevelUsed:0 });
     setResponseTimesMs((prev) => [...prev, elapsedMs]);
     if (elapsedMs < fastestAnswerMs) setFastestAnswerMs(elapsedMs);
 
@@ -209,6 +217,7 @@ export const ShrineSpeedrunScreen: React.FC<ShrineSpeedrunScreenProps> = ({
       }
 
       setFlashFeedback('WRONG');
+      audioEngine.playSfx('SFX_WRONG');
       const qXp = calculateXpReward(currentQ.rewardXp, false, 0);
       setEarnedXp((prev) => prev + qXp);
     }
@@ -285,9 +294,10 @@ export const ShrineSpeedrunScreen: React.FC<ShrineSpeedrunScreenProps> = ({
   const timerSecDisplay = (timeRemainingMs / 1000).toFixed(1);
 
   return (
-    <div className="min-h-screen aurora-bg p-3 md:p-6 flex flex-col justify-between text-slate-100 max-w-3xl mx-auto select-none">
-      {/* Top Speedrun HUD */}
-      <header className="frost-card rounded-2xl p-3.5 flex items-center justify-between gap-2 shadow-lg">
+    <SceneBackground territoryId="FROZEN_ARCTIC" sceneType="FARMING" className="p-3 md:p-6">
+      <div className="flex-1 flex flex-col justify-between text-slate-100 max-w-3xl mx-auto w-full select-none font-sans">
+        {/* Top Speedrun HUD */}
+        <header className="frost-card rounded-2xl p-3.5 flex items-center justify-between gap-2 shadow-lg">
         <div className="flex items-center gap-2.5">
           <div className="text-2xl">{hero.avatar}</div>
           <div>
@@ -453,6 +463,7 @@ export const ShrineSpeedrunScreen: React.FC<ShrineSpeedrunScreenProps> = ({
         <span>🔥 คอมโบสูงสุด: {maxCombo}</span>
         <span>🎯 แม่นยำ: {currentIndex > 0 ? `${Math.round((correctCount / currentIndex) * 100)}%` : '100%'}</span>
       </footer>
-    </div>
+      </div>
+    </SceneBackground>
   );
 };

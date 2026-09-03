@@ -1,0 +1,16 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 900 1200" width="900" height="1200">
+      <defs>
+        <linearGradient id="dojoSky" x1="0%" y1="0%" x2="0%" y2="100%">
+          <stop offset="0%" stop-color="#020617"/>
+          <stop offset="60%" stop-color="#0c2340"/>
+          <stop offset="100%" stop-color="#020617"/>
+        </linearGradient>
+      </defs>
+      <rect width="900" height="1200" fill="url(#dojoSky)"/>
+      <!-- Dojo Pillars -->
+      <rect x="72" y="300" width="36" height="840" rx="8" fill="#0284c7" fill-opacity="0.3"/>
+      <rect x="792" y="300" width="36" height="840" rx="8" fill="#0284c7" fill-opacity="0.3"/>
+      <!-- Open Arena Combat Circle -->
+      <ellipse cx="450" cy="936" rx="405" ry="180" fill="#0369a1" fill-opacity="0.15" stroke="#38bdf8" stroke-width="2" stroke-opacity="0.4"/>
+      <ellipse cx="450" cy="936" rx="315" ry="120" fill="none" stroke="#fbbf24" stroke-width="1" stroke-opacity="0.3" stroke-dasharray="6 4"/>
+    </svg>

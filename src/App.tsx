@@ -1,4 +1,5 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
+import {entryScreen} from './services/entry-path';
 import { 
   PlayerProfile, 
   HeroClassId, 
@@ -15,7 +16,7 @@ import {
   QuestionItem
 } from './types';
 import { AvatarVisualId, AvatarGender, DrillConfig, DrillResult, TutorLesson } from './types/learning';
-import { DEFAULT_PROFILE, LocalStorageAdapter } from './storage/local-storage-adapter';
+import { DEFAULT_PROFILE } from './storage/local-storage-adapter';
 import { HERO_CLASSES } from './progression/hero-classes';
 import { DOJO_STAGES, getDojoQuestions } from './content/dojo-database';
 import { SHRINE_STAGES, getShrineQuestions } from './content/shrine-database';
@@ -32,6 +33,7 @@ import { generateDailyQuestSession } from './engine/daily-quest-engine';
 // UI Screens & Modals
 import { AvatarHeroSelectScreen } from './ui/screens/AvatarHeroSelectScreen';
 import { HeroSelectScreen } from './ui/screens/HeroSelectScreen';
+import { ArcticHeroSelectScreen } from './ui/screens/ArcticHeroSelectScreen';
 import { MapScreen } from './ui/screens/MapScreen';
 import { StageDetailScreen } from './ui/screens/StageDetailScreen';
 import { TutorRoomScreen } from './ui/screens/TutorRoomScreen';
@@ -54,17 +56,32 @@ import { ReviewHubScreen } from './ui/screens/ReviewHubScreen';
 import { MagicMarketModal } from './ui/modals/MagicMarketModal';
 import { FormulaCodexModal } from './ui/modals/FormulaCodexModal';
 import { LoginScreen } from './ui/screens/LoginScreen';
+import { LandingScreen } from './ui/screens/LandingScreen';
 import { StudentHomeScreen } from './ui/screens/StudentHomeScreen';
 import { TeacherHomeScreen } from './ui/screens/TeacherHomeScreen';
+import { PersistedProgressHome } from './ui/components/PersistedProgressHome';
+import { VerifiedCampaignGate } from './ui/components/VerifiedCampaignGate';
+import { VerifiedCampaignResult } from './ui/components/VerifiedCampaignResult';
+import { AdminAccessGuard } from './ui/components/AdminAccessGuard';
+import { AdminConsoleScreen } from './ui/screens/AdminConsoleScreen';
 import { BattleLobbyScreen } from './ui/screens/BattleLobbyScreen';
 import { ClassroomBattleScreen } from './ui/screens/ClassroomBattleScreen';
 import { BattleReviewScreen } from './ui/screens/BattleReviewScreen';
 import { TeacherBattleConsoleScreen } from './ui/screens/TeacherBattleConsoleScreen';
+import { ProfessorArenaConsoleScreen } from './ui/screens/ProfessorArenaConsoleScreen';
+import { realtimeArenaService } from './services/realtime-arena-service';
 import { authService } from './services/auth-service';
+import { authSession } from './auth/session';
+import { getSupabaseClient } from './lib/supabaseClient';
+import { flushGameEvidence } from './services/game-evidence';
+import { CloudOwnedProgress, DemoOwnedProgress, freshProfile, supabaseProgressTransport } from './storage/owned-progress';
 import { UserSession, StudentSession, TeacherSession } from './types/auth';
 import { BattleRoom, BattlePlayerState } from './types/battle';
 
 type AppScreen = 
+  | 'LANDING'
+  | 'STUDENT_LOGIN'
+  | 'TEACHER_LOGIN'
   | 'LOGIN'
   | 'STUDENT_HOME'
   | 'TEACHER_HOME'
@@ -93,12 +110,18 @@ type AppScreen =
   | 'FINAL_TRIAL'
   | 'TOP_FORM_CEREMONY'
   | 'INVENTORY'
-  | 'REVIEW_HUB';
+  | 'REVIEW_HUB'
+  | 'STAFF_LOGIN'
+  | 'ADMIN_CONSOLE';
 
 export const App: React.FC = () => {
-  const storage = new LocalStorageAdapter();
   const [profile, setProfile] = useState<PlayerProfile>(DEFAULT_PROFILE);
-  const [currentScreen, setCurrentScreen] = useState<AppScreen>('AVATAR_SELECT');
+  const [currentScreen, setCurrentScreen] = useState<AppScreen>(()=>entryScreen(window.location.pathname));
+  const [authReady,setAuthReady]=useState(false);
+  const returnToLanding=()=>{window.history.replaceState(null,'','/');setCurrentScreen('LANDING');};
+  const enterAdmin=()=>{if(window.location.pathname!=='/admin')window.history.pushState(null,'','/admin');setCurrentScreen('ADMIN_CONSOLE');};
+  useEffect(()=>{const changed=()=>setCurrentScreen(entryScreen(window.location.pathname));window.addEventListener('popstate',changed);return()=>window.removeEventListener('popstate',changed);},[]);
+  useEffect(()=>{if(currentScreen==='ADMIN_CONSOLE'&&entryScreen(window.location.pathname)!=='ADMIN_CONSOLE')window.history.replaceState(null,'','/admin');},[currentScreen]);
   const [isLoading, setIsLoading] = useState<boolean>(true);
 
   // Modals state
@@ -116,6 +139,7 @@ export const App: React.FC = () => {
   // Dojo state
   const [activeDojoStageId, setActiveDojoStageId] = useState<string>('D1');
   const [dojoSessionResult, setDojoSessionResult] = useState<StageSessionResult | null>(null);
+  const [completedCampaignId,setCompletedCampaignId]=useState<string|null>(null);
 
   // Shrine state
   const [activeShrineStageId, setActiveShrineStageId] = useState<string>('F1');
@@ -139,6 +163,48 @@ export const App: React.FC = () => {
 
   // Auth & Session state
   const [session, setSession] = useState<UserSession | null>(authService.getCurrentSession());
+  const [loadedOwner, setLoadedOwner] = useState<string | null>(null);
+  const [progressError, setProgressError] = useState('');
+  const [loadAttempt, setLoadAttempt] = useState(0);
+  const realMode = authSession.getAdapterMode() === 'supabase';
+  const storage = useMemo(() => {
+    if (!session) return null;
+    if (realMode && session.role === 'STUDENT') {
+      const client = getSupabaseClient();
+      return client ? new CloudOwnedProgress(session.userId, supabaseProgressTransport(client),
+        () => authSession.getCurrentUser()?.id || null) : null;
+    }
+    return new DemoOwnedProgress(`${session.role}:${session.userId}`, localStorage);
+  }, [session?.userId, session?.role, realMode, loadAttempt]);
+
+  useEffect(() => {
+    let cancelled = false;
+    setLoadedOwner(null);
+    setProfile(freshProfile());
+    setProgressError('');
+    if (session && storage) {
+      storage.loadProfile().then(saved => {
+        if (!cancelled) { setProfile(saved); setLoadedOwner(session.userId); }
+      }).catch(() => {
+        if (!cancelled) setProgressError('โหลดความคืบหน้าไม่ได้ กรุณาลองใหม่ ข้อมูลของบัญชีอื่นจะไม่ถูกนำมาใช้');
+      });
+    } else if (session) setProgressError('ยังไม่ได้ตั้งค่าการบันทึกความคืบหน้าของเกม');
+    return () => { cancelled = true; };
+  }, [storage, session?.userId, loadAttempt]);
+
+  useEffect(() => {
+    const owner = realMode && session?.role === 'STUDENT' ? session.userId : null;
+    const flush = () => { if (owner) void flushGameEvidence(owner).catch(() => {}); };
+    flush();
+    window.addEventListener('online',flush);
+    return () => window.removeEventListener('online',flush);
+  }, [session?.userId, realMode]);
+
+  useEffect(() => {
+    const warn = () => window.alert('บันทึกหลักฐานการเล่นไม่ได้ พื้นที่จัดเก็บของเบราว์เซอร์อาจเต็ม คะแนนรอบนี้ยังไม่ได้รับการยืนยัน');
+    window.addEventListener('game-evidence-save-error',warn);
+    return () => window.removeEventListener('game-evidence-save-error',warn);
+  }, []);
 
   // Classroom Battle state
   const [activeBattleRoom, setActiveBattleRoom] = useState<BattleRoom | null>(null);
@@ -147,21 +213,78 @@ export const App: React.FC = () => {
   // Load saved profile on mount
   useEffect(() => {
     async function init() {
-      const saved = await storage.loadProfile();
-      if (saved) {
-        setProfile(saved);
-        if (saved.clearedStages.length > 0) {
-          setCurrentScreen(session?.role === 'TEACHER' ? 'TEACHER_HOME' : 'STUDENT_HOME');
+      let restoredSession:UserSession|null=null;
+      try{restoredSession=await authService.restoreSession();}catch{/* Restoration failure must not authorize Admin. */}
+      setSession(restoredSession);
+      setCurrentScreen(entryScreen(window.location.pathname));
+      setAuthReady(true);
+
+      // Check URL hash for fast inspection routing
+      if (typeof window !== 'undefined' && entryScreen(window.location.pathname)==='LANDING' && authSession.getAdapterMode() === 'mock') {
+        const hash = window.location.hash;
+        if (hash === '#/professor-console') {
+          setCurrentScreen('TEACHER_BATTLE_CONSOLE');
+        } else if (hash === '#/hero-select') {
+          setCurrentScreen('HERO_SELECT');
+        } else if (hash === '#/login') {
+          setCurrentScreen('LOGIN');
+        } else if (hash === '#/battle') {
+          // Initialize mock active battle for visual inspection
+          const mockBRoom: BattleRoom = {
+            id: 'room_preview_01',
+            teacherId: 'usr_prof_001',
+            teacherName: 'คุณครูปัญญา วิชาการ',
+            classRoomId: 'P6-1',
+            roomCode: 'ICE742',
+            battleMode: 'LIVE_CLASSROOM',
+            questionMode: 'MIRROR_BATTLE',
+            sourceStageId: 'D1',
+            questionCount: 8,
+            showLiveRank: true,
+            status: 'IN_BATTLE',
+            questions: getDojoQuestions('D1').slice(0, 8),
+            players: {},
+            createdAt: Date.now(),
+          };
+          const mockBPlayer: BattlePlayerState = {
+            playerId: 'usr_lrn_001',
+            studentName: 'น้องกล้าหาญ (Alex)',
+            classRoomId: 'P6-1',
+            avatarVisualId: 'BOY_WIZARD',
+            heroId: 'CHRONOMANCER',
+            status: 'PLAYING',
+            currentIndex: 0,
+            totalQuestions: 8,
+            correctCount: 2,
+            wrongCount: 0,
+            streak: 2,
+            battleScore: 280,
+            accuracy: 100,
+            avgResponseTimeSec: 4.5,
+            joinedAt: Date.now(),
+            answers: [],
+          };
+          setActiveBattleRoom(mockBRoom);
+          setActiveBattlePlayer(mockBPlayer);
+          setCurrentScreen('CLASSROOM_BATTLE');
         }
       }
+
       setIsLoading(false);
     }
     init();
+    return authSession.subscribe(() => {
+      if (authSession.getAdapterMode() === 'supabase') {
+        setSession(authService.getCurrentSession());
+      }
+    });
   }, []);
 
   const updateProfile = async (newProfile: PlayerProfile) => {
+    if (!storage || !session || loadedOwner !== session.userId) throw new Error('Player progress is not loaded');
     setProfile(newProfile);
-    await storage.saveProfile(newProfile);
+    try { await storage.saveProfile(newProfile); }
+    catch { setProgressError('ยังบันทึกความคืบหน้าไม่ได้ กรุณาลองบันทึกซ้ำก่อนออกจากหน้านี้'); }
   };
 
   const handleConfirmCharacter = async (
@@ -367,7 +490,46 @@ export const App: React.FC = () => {
     }
   };
 
-  if (isLoading) {
+  // These boundaries precede generic session/game-save rendering. Direct screen entry
+  // still requires verified ADMIN membership and cannot reuse a Teacher UI label.
+  if(currentScreen==='LANDING'&&!authReady)return <main role="status" className="min-h-screen bg-slate-950 text-slate-100 p-8">Restoring game session…</main>;
+  if (currentScreen === 'ADMIN_CONSOLE') {
+    if(!authReady)return <main className="min-h-screen bg-slate-100 text-slate-900 p-8" role="status">Restoring Game Admin session…</main>;
+    return <AdminAccessGuard onExit={returnToLanding} renderDenied={realMode?()=>
+      <LoginScreen initialRole="ADMIN" lockRole mode="ALL" onBackToLanding={returnToLanding}
+        onLoginSuccess={newSession=>{setSession(newSession);enterAdmin();}}/>:undefined}>
+      {identity => <AdminConsoleScreen identity={identity} onLogout={() => {
+        setSession(null); returnToLanding();
+        void authService.logout().catch(() => {});
+      }} />}
+    </AdminAccessGuard>;
+  }
+  if (currentScreen === 'STAFF_LOGIN') {
+    if (!realMode) return <main className="min-h-screen bg-slate-100 text-slate-900 p-8"><p role="alert">Staff/Admin entry requires real Supabase authentication. Demo access is unavailable.</p><button className="min-h-[44px] border rounded px-4 mt-4" onClick={() => setCurrentScreen('LANDING')}>Return to landing</button></main>;
+    return <LoginScreen initialRole="ADMIN" lockRole mode="ALL" onBackToLanding={() => setCurrentScreen('LANDING')}
+      onLoginSuccess={newSession => { setSession(newSession); setCurrentScreen('ADMIN_CONSOLE'); }} />;
+  }
+
+  if (progressError && currentScreen!=='LANDING') {
+    return <div className="min-h-screen bg-slate-950 text-slate-100 p-8" role="alert">
+      <p>{progressError}</p>
+      <button className="min-h-[44px] p-3" onClick={async () => {
+        if (loadedOwner && storage) {
+          try { await storage.retry(); setProgressError(''); }
+          catch { setProgressError('บันทึกไม่สำเร็จ หากข้อมูลถูกเปลี่ยนจากอุปกรณ์อื่น ให้โหลดข้อมูลล่าสุด'); }
+        } else setLoadAttempt(value => value + 1);
+      }}>ลองอีกครั้ง</button>
+      <button className="min-h-[44px] p-3" onClick={() => {
+        if (window.confirm('โหลดข้อมูลล่าสุดจากเซิร์ฟเวอร์? การเปลี่ยนแปลงที่ยังไม่ได้บันทึกในหน้านี้จะหายไป')) {
+          setLoadAttempt(value => value + 1);
+        }
+      }}>โหลดข้อมูลล่าสุด</button>
+      <button className="min-h-[44px] p-3" onClick={async () => {
+        await authService.logout(); setSession(null); setCurrentScreen('LOGIN'); setProgressError('');
+      }}>ออกจากระบบ</button>
+    </div>;
+  }
+  if (currentScreen!=='LANDING' && (isLoading || (session && loadedOwner !== session.userId))) {
     return (
       <div className="min-h-screen bg-slate-950 flex items-center justify-center text-cyan-400 font-bold font-sans">
         กำลังโหลดดินแดนแห่งตัวเลข Klapanya Math Quest...
@@ -389,18 +551,70 @@ export const App: React.FC = () => {
 
   const topFormEligibility = evaluateTopFormEligibility(profile);
 
-  // If not logged in, render LoginScreen
-  if (!session || currentScreen === 'LOGIN') {
+  // 1. Landing and Login screen states
+  if (currentScreen === 'LANDING') {
+    return (
+      <LandingScreen
+        onGoToStaffLogin={enterAdmin}
+        onGoToStudentLogin={() => setCurrentScreen('STUDENT_LOGIN')}
+        onGoToTeacherLogin={() => setCurrentScreen('TEACHER_LOGIN')}
+        onQuickDemoStudent={async () => {
+          if (authSession.getAdapterMode() !== 'mock') { setCurrentScreen('STUDENT_LOGIN'); return; }
+          const s = await authService.loginAsStudent('น้องกล้าหาญ (Alex)', 'P6-1');
+          setSession(s);
+          setCurrentScreen('STUDENT_HOME');
+        }}
+        onQuickDemoTeacher={async () => {
+          if (authSession.getAdapterMode() !== 'mock') { setCurrentScreen('TEACHER_LOGIN'); return; }
+          const t = await authService.loginAsTeacher('คุณครูปัญญา วิชาการ', 'โรงเรียนกล้าปัญญา (The Wisdom Academy School)');
+          setSession(t);
+          setCurrentScreen('TEACHER_HOME');
+        }}
+      />
+    );
+  }
+
+  if (currentScreen === 'STUDENT_LOGIN') {
     return (
       <LoginScreen
+        mode="STUDENT"
         onLoginSuccess={(newSession) => {
           setSession(newSession);
-          if (newSession.role === 'TEACHER') {
+          setCurrentScreen(realMode && authSession.getCurrentUser()?.role === 'ADMIN' ? 'ADMIN_CONSOLE' : newSession.role==='TEACHER'?'TEACHER_HOME':'STUDENT_HOME');
+        }}
+        onBackToLanding={() => setCurrentScreen('LANDING')}
+      />
+    );
+  }
+
+  if (currentScreen === 'TEACHER_LOGIN') {
+    return (
+      <LoginScreen
+        mode="TEACHER"
+        onLoginSuccess={(newSession) => {
+          setSession(newSession);
+          setCurrentScreen(realMode && authSession.getCurrentUser()?.role === 'ADMIN' ? 'ADMIN_CONSOLE' : newSession.role==='TEACHER'?'TEACHER_HOME':'STUDENT_HOME');
+        }}
+        onBackToLanding={() => setCurrentScreen('LANDING')}
+      />
+    );
+  }
+
+  if (currentScreen === 'LOGIN' || (!session && currentScreen !== 'HERO_SELECT')) {
+    return (
+      <LoginScreen
+        mode="ALL"
+        onLoginSuccess={(newSession) => {
+          setSession(newSession);
+          if (realMode && authSession.getCurrentUser()?.role === 'ADMIN') {
+            setCurrentScreen('ADMIN_CONSOLE');
+          } else if (newSession.role === 'TEACHER') {
             setCurrentScreen('TEACHER_HOME');
           } else {
             setCurrentScreen('STUDENT_HOME');
           }
         }}
+        onBackToLanding={() => setCurrentScreen('LANDING')}
       />
     );
   }
@@ -409,11 +623,19 @@ export const App: React.FC = () => {
     <div className="min-h-screen bg-arctic-900 text-slate-100 font-sans">
       
       {/* 0a. Student Home Screen */}
-      {currentScreen === 'STUDENT_HOME' && session.role === 'STUDENT' && (
+      {currentScreen === 'STUDENT_HOME' && session && session.role === 'STUDENT' && (
         <StudentHomeScreen
           session={session as StudentSession}
           profile={profile}
-          onNavigateToMap={() => setCurrentScreen('MAP')}
+          onNavigateToMap={async () => {
+            if(realMode){
+              const owner=session.userId;
+              try {await storage?.retry();}catch{setProgressError('ยังบันทึกข้อมูลไม่ได้ กรุณาลองอีกครั้งก่อนเล่นต่อ');return;}
+              if(authSession.getCurrentUser()?.id!==owner)return;
+              setLoadedOwner(null);setLoadAttempt(n=>n+1);
+            }
+            setCurrentScreen('MAP');
+          }}
           onNavigateToTutor={(stgId) => handleOpenTutor(stgId || 'D1')}
           onNavigateToDrill={(drillType) => handleOpenDrill(drillType as any)}
           onNavigateToDailyQuest={() => handleStartDailyQuest()}
@@ -431,7 +653,10 @@ export const App: React.FC = () => {
       )}
 
       {/* 0b. Teacher Home Screen */}
-      {currentScreen === 'TEACHER_HOME' && session.role === 'TEACHER' && (
+      {currentScreen === 'TEACHER_HOME' && session && session.role === 'TEACHER' && realMode && (
+        <main className="max-w-6xl mx-auto p-4 md:p-8"><PersistedProgressHome key={session.userId} owner={session.userId} teacher onLogout={async()=>{await authService.logout();setSession(null);setCurrentScreen('LOGIN');}}/></main>
+      )}
+      {currentScreen === 'TEACHER_HOME' && session && session.role === 'TEACHER' && !realMode && (
         <TeacherHomeScreen
           session={session as TeacherSession}
           onPreviewStage={(stgId) => handleSelectStage(stgId)}
@@ -485,11 +710,37 @@ export const App: React.FC = () => {
         />
       )}
 
-      {/* 0f. Teacher Live Battle Console */}
+      {/* 0f. Teacher Live Battle Console (Sprint 7 Professor Arena Console) */}
       {currentScreen === 'TEACHER_BATTLE_CONSOLE' && (
-        <TeacherBattleConsoleScreen
-          initialRoomCode="ICE710"
+        <ProfessorArenaConsoleScreen
+          room={
+            (realtimeArenaService as any).rooms?.get('room_seed_001') || {
+              id: 'room_seed_001',
+              roomCode: 'ICE742',
+              organizationId: 'ORG_KLAPANYA',
+              classroomId: 'P6-1',
+              professorId: 'usr_prof_001',
+              professorName: 'คุณครูปัญญา วิชาการ',
+              professorAvatar: 'professor_male',
+              territoryId: 'FROZEN_ARCTIC',
+              questionSetId: 'DOJO_D1_CORE',
+              title: 'ลานประลองสมการเชิงเส้น ป.6/1 (Arctic Classroom Duel)',
+              mode: 'STANDARD_DUEL',
+              status: 'LOBBY',
+              maxPlayers: 12,
+              currentRoundIndex: 0,
+              totalRounds: 8,
+              roundTimeLimitSec: 30,
+              roundSecondsLeft: 30,
+              questions: getDojoQuestions('D1').slice(0, 8),
+              participants: {},
+              hintsUsedCount: 0,
+              recoveryQueueCount: 0,
+              createdAt: new Date().toISOString(),
+            }
+          }
           onExit={() => setCurrentScreen('TEACHER_HOME')}
+          onOpenReviewHub={() => setCurrentScreen('REVIEW_HUB')}
         />
       )}
 
@@ -501,13 +752,17 @@ export const App: React.FC = () => {
         />
       )}
 
-      {/* Legacy Class Select */}
+      {/* Arctic Hero Select (Master Approved Template) */}
       {currentScreen === 'HERO_SELECT' && (
-        <HeroSelectScreen
+        <ArcticHeroSelectScreen
           currentHeroId={profile.heroId}
-          onSelectHero={async (hId) => {
-            await updateProfile({ ...profile, heroId: hId });
+          playerName={profile.heroName || (session && session.role === 'STUDENT' ? (session as StudentSession).studentName : 'ผู้กล้าคณิตศาสตร์')}
+          onConfirmHero={async (hId, hName) => {
+            await updateProfile({ ...profile, heroId: hId, heroName: hName });
             setCurrentScreen('MAP');
+          }}
+          onBackToTerritory={() => {
+            setCurrentScreen('LANDING');
           }}
         />
       )}
@@ -608,6 +863,10 @@ export const App: React.FC = () => {
 
       {/* 7. Dojo Battle Screen with Smart Remediation */}
       {currentScreen === 'DOJO_BATTLE' && (
+        realMode&&session?.role==='STUDENT'?<VerifiedCampaignGate key={`${session.userId}:${activeDojoStageId}`} owner={session.userId} stageId={activeDojoStageId} heroId={profile.heroId} onExit={()=>setCurrentScreen('MAP')}>
+          {sessionId=><BattleScreen trustedSessionId={sessionId} stageId={activeDojoStageId} stageName={activeDojoStageInfo.thaiName} questions={activeDojoQuestions} profile={profile} isExamMode={false}
+            onFinishSession={async res=>{setCompletedCampaignId(sessionId);setDojoSessionResult(res);await handleFinishSessionGeneric(res);setCurrentScreen('DOJO_RESULT');}} onExitStage={()=>setCurrentScreen('MAP')}/>}
+        </VerifiedCampaignGate>:
         <BattleScreen
           stageId={activeDojoStageId}
           stageName={activeDojoStageInfo.thaiName}
@@ -624,6 +883,7 @@ export const App: React.FC = () => {
       )}
 
       {currentScreen === 'DOJO_RESULT' && dojoSessionResult && (
+        realMode&&session&&completedCampaignId?<VerifiedCampaignResult sessionId={completedCampaignId} owner={session.userId} onExit={()=>setCurrentScreen('MAP')}/>:
         <ResultScreen
           result={dojoSessionResult}
           onReturnToMap={() => setCurrentScreen('MAP')}
@@ -741,19 +1001,22 @@ export const App: React.FC = () => {
         />
       )}
 
-      {/* Floating Review & Playtest Hub Trigger */}
-      <div className="fixed bottom-3 right-3 z-50">
-        <button
-          onClick={() => setCurrentScreen('REVIEW_HUB')}
-          className="px-3.5 py-2 rounded-2xl bg-cyan-500 hover:bg-cyan-400 text-slate-950 font-black text-xs shadow-glow-cyan flex items-center gap-1.5 border-2 border-cyan-200 transform hover:scale-105 transition-all"
-          title="เปิดแดชบอร์ดตรวจสอบงาน UI & ทดสอบทุกหน้าจอ"
-        >
-          <span>🔬</span>
-          <span>Review Hub</span>
-        </button>
-      </div>
+      {/* Floating Review & Playtest Hub Trigger (Dev & Teacher Authorized Only) */}
+      {authSession.can('ACCESS_REVIEW_HUB') && (
+        <div className="fixed bottom-3 right-3 z-50">
+          <button
+            onClick={() => setCurrentScreen('REVIEW_HUB')}
+            className="px-3 py-1.5 rounded-2xl bg-purple-600 hover:bg-purple-500 text-white font-black text-[11px] shadow-lg flex items-center gap-1.5 border border-purple-300 transform hover:scale-105 transition-all opacity-80 hover:opacity-100"
+            title="Authorized Review & Inspection Hub"
+          >
+            <span>🔬</span>
+            <span>Review Hub</span>
+          </button>
+        </div>
+      )}
 
-      {currentScreen === 'REVIEW_HUB' && (
+      {currentScreen === 'REVIEW_HUB' && !authSession.can('ACCESS_REVIEW_HUB') && <div role="alert" className="p-6">Review Hub access denied.<button className="min-h-[44px] px-4" onClick={() => setCurrentScreen('LANDING')}>Return to landing</button></div>}
+      {currentScreen === 'REVIEW_HUB' && authSession.can('ACCESS_REVIEW_HUB') && (
         <ReviewHubScreen
           profile={profile}
           onNavigate={(scr) => setCurrentScreen(scr as AppScreen)}

@@ -12,6 +12,7 @@ import {
   ShieldCheck, 
   Flame 
 } from 'lucide-react';
+import { SceneBackground } from '../components/SceneBackground';
 
 interface BattleLobbyScreenProps {
   profile: PlayerProfile;
@@ -77,10 +78,11 @@ export const BattleLobbyScreen: React.FC<BattleLobbyScreenProps> = ({
   }, [currentRoom, currentPlayer]);
 
   return (
-    <div className="min-h-screen aurora-bg p-4 md:p-8 text-slate-100 font-sans select-none max-w-3xl mx-auto flex flex-col justify-between">
-      
-      {/* Header */}
-      <header className="frost-card rounded-2xl p-4 mb-4 border border-cyan-400/60 shadow-glow-cyan flex items-center justify-between">
+    <SceneBackground territoryId="FROZEN_ARCTIC" sceneType="ARENA_LOBBY" className="p-4 md:p-8">
+      <div className="flex-1 flex flex-col justify-between text-slate-100 max-w-3xl mx-auto w-full select-none font-sans">
+        
+        {/* Header */}
+        <header className="frost-card rounded-2xl p-4 mb-4 border border-cyan-400/60 shadow-glow-cyan flex items-center justify-between">
         <div className="flex items-center gap-3">
           <button
             onClick={onExit}
@@ -122,8 +124,9 @@ export const BattleLobbyScreen: React.FC<BattleLobbyScreenProps> = ({
               value={roomCode}
               onChange={(e) => setRoomCode(e.target.value.toUpperCase())}
               maxLength={6}
+              autoComplete="off"
               placeholder="เช่น ICE710"
-              className="w-full p-3.5 rounded-2xl bg-slate-900 border-2 border-cyan-400/80 text-center font-mono font-black text-xl text-amber-300 tracking-widest focus:outline-none shadow-inner"
+              className="w-full p-3.5 rounded-2xl bg-white text-slate-900 border-2 border-cyan-400 text-center font-mono font-black text-xl placeholder:text-slate-400 caret-cyan-600 tracking-widest focus:outline-none focus:ring-2 focus:ring-cyan-200 shadow-sm select-text cursor-text pointer-events-auto"
             />
 
             {joinError && (
@@ -219,6 +222,7 @@ export const BattleLobbyScreen: React.FC<BattleLobbyScreenProps> = ({
       <footer className="mt-4 text-center text-xs text-slate-400">
         <span>ความแม่นยำสำคัญกว่าความเร็ว • ตอบถูกต่อเนื่องรับโบนัสคอมโบ 🪙</span>
       </footer>
-    </div>
+      </div>
+    </SceneBackground>
   );
 };

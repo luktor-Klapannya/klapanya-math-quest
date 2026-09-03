@@ -14,11 +14,18 @@ export type AvatarVisualId =
 
 export interface AvatarVisualProfile {
   id: AvatarVisualId;
+  registryKey: string; // e.g. 'hero_m_speed_chronomancer'
   name: string;
   thaiName: string;
   gender: AvatarGender;
   recommendedHeroClass: HeroClassId;
   avatarSprite: string;
+  portraitAsset?: string;
+  fullBodyAsset?: string;
+  battleAsset?: string;
+  victoryAsset?: string;
+  classEmblemAsset?: string;
+  weaponAsset?: string;
   description: string;
   statFlavor: {
     calculationPower: number; // 0 - 100

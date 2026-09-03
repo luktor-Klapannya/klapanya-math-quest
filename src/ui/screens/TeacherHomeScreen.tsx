@@ -66,7 +66,7 @@ export const TeacherHomeScreen: React.FC<TeacherHomeScreenProps> = ({
   };
 
   return (
-    <div className="min-h-screen aurora-bg p-4 md:p-8 text-slate-100 font-sans select-none max-w-6xl mx-auto space-y-6">
+    <div className="min-h-screen aurora-bg p-4 md:p-8 text-slate-100 font-sans max-w-6xl mx-auto space-y-6">
       
       {/* Top Header */}
       <header className="frost-card rounded-2xl p-4 md:p-6 border-2 border-amber-400/80 shadow-glow-gold flex flex-wrap items-center justify-between gap-4">
@@ -256,7 +256,7 @@ export const TeacherHomeScreen: React.FC<TeacherHomeScreenProps> = ({
                 <select
                   value={asgType}
                   onChange={(e) => setAsgType(e.target.value as AssignmentType)}
-                  className="w-full p-2.5 rounded-xl bg-slate-900 border border-slate-700 text-white"
+                  className="w-full p-2.5 rounded-xl bg-white text-slate-900 border border-slate-300 focus:border-amber-500 focus:ring-2 focus:ring-amber-200 outline-none font-bold select-text cursor-pointer shadow-sm"
                 >
                   <option value="TUTOR">📖 ห้องติวเข้ม 7 ขั้นตอน (Tutor Room)</option>
                   <option value="DRILL">⚡ ดริลล์ฝึกฝนเฉพาะทักษะ (Skill Drill)</option>
@@ -270,7 +270,7 @@ export const TeacherHomeScreen: React.FC<TeacherHomeScreenProps> = ({
                 <select
                   value={asgStageId}
                   onChange={(e) => setAsgStageId(e.target.value)}
-                  className="w-full p-2.5 rounded-xl bg-slate-900 border border-slate-700 text-white"
+                  className="w-full p-2.5 rounded-xl bg-white text-slate-900 border border-slate-300 focus:border-amber-500 focus:ring-2 focus:ring-amber-200 outline-none font-bold select-text cursor-pointer shadow-sm"
                 >
                   <option value="D1">D1: ค่าประจำหลักและการคำนวณ</option>
                   <option value="D2">D2: ตัวประกอบเฉพาะและ ห.ร.ม./ค.ร.น.</option>
@@ -292,7 +292,7 @@ export const TeacherHomeScreen: React.FC<TeacherHomeScreenProps> = ({
                   value={asgTitle}
                   onChange={(e) => setAsgTitle(e.target.value)}
                   placeholder="เช่น ติวเข้มสมการก่อนสอบย่อย"
-                  className="w-full p-2.5 rounded-xl bg-slate-900 border border-slate-700 text-white"
+                  className="w-full p-2.5 rounded-xl bg-white text-slate-900 placeholder:text-slate-400 caret-amber-600 border border-slate-300 focus:border-amber-500 focus:ring-2 focus:ring-amber-200 outline-none font-bold select-text cursor-text pointer-events-auto shadow-sm"
                 />
               </div>
 
@@ -302,7 +302,7 @@ export const TeacherHomeScreen: React.FC<TeacherHomeScreenProps> = ({
                   type="date"
                   value={asgDueDate}
                   onChange={(e) => setAsgDueDate(e.target.value)}
-                  className="w-full p-2.5 rounded-xl bg-slate-900 border border-slate-700 text-white"
+                  className="w-full p-2.5 rounded-xl bg-white text-slate-900 border border-slate-300 focus:border-amber-500 focus:ring-2 focus:ring-amber-200 outline-none font-bold select-text cursor-text pointer-events-auto shadow-sm"
                 />
               </div>
 

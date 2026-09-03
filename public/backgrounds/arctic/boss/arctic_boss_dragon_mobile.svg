@@ -1,0 +1,20 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 900 1200" width="900" height="1200">
+      <defs>
+        <linearGradient id="bossSky" x1="0%" y1="0%" x2="0%" y2="100%">
+          <stop offset="0%" stop-color="#020617"/>
+          <stop offset="50%" stop-color="#2a0808"/>
+          <stop offset="100%" stop-color="#020617"/>
+        </linearGradient>
+        <radialGradient id="bossCore" cx="50%" cy="40%" r="40%">
+          <stop offset="0%" stop-color="#f43f5e" stop-opacity="0.25"/>
+          <stop offset="100%" stop-color="#020617" stop-opacity="0"/>
+        </radialGradient>
+      </defs>
+      <rect width="900" height="1200" fill="url(#bossSky)"/>
+      <rect width="900" height="1200" fill="url(#bossCore)"/>
+      <!-- Citadel Spire Fortress -->
+      <path d="M0,1200 L180,720 L315,900 L450,480 L585,900 L720,720 L900,1200 Z" fill="#1e0a0a" fill-opacity="0.8"/>
+      <!-- Magic Boss Rune Circle -->
+      <circle cx="450" cy="504" r="120" fill="none" stroke="#f43f5e" stroke-width="2" stroke-dasharray="6 4" opacity="0.6"/>
+      <polygon points="450,404 536,554 364,554" fill="none" stroke="#fbbf24" stroke-width="1.5" opacity="0.5"/>
+    </svg>

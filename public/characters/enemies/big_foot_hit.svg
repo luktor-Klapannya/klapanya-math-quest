@@ -1,0 +1,15 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 200" width="200" height="200">
+        <defs>
+          <radialGradient id="big_foot_hit_grad" cx="50%" cy="40%" r="50%">
+            <stop offset="0%" stop-color="#f43f5e" stop-opacity="0.8"/>
+            <stop offset="100%" stop-color="#020617" stop-opacity="0.9"/>
+          </radialGradient>
+        </defs>
+        <circle cx="100" cy="100" r="70" fill="url(#big_foot_hit_grad)" opacity="0.9" stroke="#f43f5e" stroke-width="3"/>
+        <circle cx="80" cy="85" r="10" fill="#ffffff" />
+        <circle cx="120" cy="85" r="10" fill="#ffffff" />
+        <circle cx="75" cy="85" r="5" fill="#ef4444" />
+        <circle cx="115" cy="85" r="5" fill="#ef4444" />
+        <path d="M75,125 Q100,145 125,125" stroke="#ffffff" stroke-width="4" fill="none" stroke-linecap="round"/>
+        <polygon points="100,20 110,45 135,50 115,70 120,95 100,80 80,95 85,70 65,50 90,45" fill="#f43f5e" opacity="0.7"/>
+      </svg>

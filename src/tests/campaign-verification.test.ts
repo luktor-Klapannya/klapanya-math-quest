@@ -1,0 +1,50 @@
+import {campaignDefinition,replayCampaign} from '../../server/campaign-replay';
+import {campaignHandler} from '../../server/campaign-api';
+import {getDojoQuestions} from '../content/dojo-database';
+import type {SupabaseClient} from '@supabase/supabase-js';
+async function run(){
+ let passed=0;const check=(v:unknown,label:string)=>{if(!v)throw new Error(label);passed++;console.log(`PASS: ${label}`);};
+ const rejects=(fn:()=>unknown,label:string)=>{let rejected=false;try{fn();}catch{rejected=true;}check(rejected,label);};
+ const definition=campaignDefinition('D1','CHRONOMANCER',null);
+ const questions=getDojoQuestions('D1');
+ const attempts=questions.map(q=>({questionId:q.id,selectedOptionId:q.options.find(o=>o.isCorrect)!.id,timeSpentSec:5,hintLevelUsed:0}));
+ const all=replayCampaign(definition,attempts,null);
+ check(all.result.correctCount===30&&all.result.accuracy===100&&all.result.isPassed,'Full canonical stage produces server-derived perfect result');
+ check(all.nextState.clearedStages.includes('D1')&&all.nextState.unlockedGear.includes('BLADE_OF_CALCULATION'),'Frozen D1 gear and completion transition preserved');
+ check(all.nextState.xp===all.rewards.xp&&all.nextState.coins===100+all.rewards.coins,'Result and verified balance transition agree');
+ check(all.nextState.skillMastery.calculation>0.25,'Frozen mastery helper applies to correct responses');
+ const wrong=attempts.map(a=>({...a,selectedOptionId:null}));
+ const none=replayCampaign(definition,wrong,null);
+ check(none.result.earnedXp===0&&none.result.earnedCoins===0&&none.result.accuracy===0,'Normal campaign wrong answers preserve zero awards');
+ const mixed=attempts.map((a,i)=>i<24?a:wrong[i]);
+ check(replayCampaign(definition,mixed,null).result.isPassed,'Frozen normal completion threshold includes 80 percent');
+ check(!replayCampaign(definition,attempts.map((a,i)=>i<23?a:wrong[i]),null).result.isPassed,'Below frozen threshold does not clear stage');
+ rejects(()=>campaignDefinition('D2','PALADIN',null),'Unverified checkpoint cannot unlock next campaign stage');
+ check(campaignDefinition('D2','PALADIN',all.nextState).stageId==='D2','Verified prerequisite unlocks next normal stage');
+ rejects(()=>campaignDefinition('BOSS-1','PALADIN',null),'Special mode cannot enter normal campaign verifier');
+ rejects(()=>replayCampaign(definition,attempts.slice(1),null),'Missing canonical question rejected');
+ rejects(()=>replayCampaign(definition,[{...attempts[0],selectedOptionId:'forged'},...attempts.slice(1)],null),'Forged option rejected');
+ rejects(()=>replayCampaign(definition,[{...attempts[0],timeSpentSec:-1},...attempts.slice(1)],null),'Invalid response time rejected');
+ rejects(()=>replayCampaign(definition,[{...attempts[0],hintLevelUsed:99},...attempts.slice(1)],null),'Invalid hint telemetry rejected');
+ const repeat=replayCampaign(definition,attempts,all.nextState);
+ check(repeat.result.unlockedGear===null,'Previously awarded gear is not granted again');
+ const tables:Record<string,any[]>={profiles:[{id:'A',auth_user_id:'auth-A',status:'ACTIVE',organization_id:'org',academic_year:'2569'}],memberships:[{profile_id:'A',organization_id:'org',role_id:'LEARNER'}],game_verified_progress:[],game_campaign_runs:[],game_sessions:[]};
+ let saved:any;let commits=0;
+ const fake={auth:{getUser:async(token:string)=>({data:{user:token==='valid'?{id:'auth-A'}:null},error:null})},from(table:string){let rows=tables[table]||[];const query={select:()=>query,eq:(k:string,v:unknown)=>{rows=rows.filter(r=>r[k]===v);return query;},in:(k:string,v:unknown[])=>{rows=rows.filter(r=>v.includes(r[k]));return query;},single:async()=>({data:rows[0]||null,error:null}),maybeSingle:async()=>({data:rows[0]||null,error:null}),then:(resolve:(x:unknown)=>unknown)=>Promise.resolve({data:rows,error:null}).then(resolve)};return query;},async rpc(name:string,args:any){
+  if(name==='open_game_campaign_run'){tables.game_campaign_runs=[{id:args.p_run_id,profile_id:'A',organization_id:'org',academic_year:'2569',definition:args.p_definition,status:'STARTED'}];return {data:{status:'STARTED'},error:null};}
+  commits++;saved=args;return {data:{result:args.p_result},error:null};
+ }} as unknown as SupabaseClient;
+ const handler=campaignHandler(fake,'https://staging.example');const id='40000000-0000-0000-0000-000000000001';
+ const call=(action:string,body:unknown,token='valid')=>handler(new Request(`https://api.example/game-api/campaign/${action}`,{method:'POST',headers:{authorization:`Bearer ${token}`},body:JSON.stringify(body)}));
+ check((await call('start',{sessionId:id,stageId:'D1',heroId:'CHRONOMANCER'},'invalid')).status===401,'API rejects unverified Auth credentials');
+ check((await call('start',{sessionId:id,stageId:'D1',heroId:'CHRONOMANCER'})).status===200,'Authenticated student can start a server-issued run');
+ check((await call('verify',{sessionId:id,attempts,score:999999})).status===400,'API refuses browser final score');
+ check((await call('verify',{sessionId:id,attempts:[{...attempts[0],isCorrect:true}]})).status===400,'API refuses caller-supplied correctness');
+ check((await call('verify',{sessionId:id,attempts})).status===200&&commits===1&&saved.p_result.accuracy===100,'API derives canonical result before trusted atomic commit');
+ tables.game_campaign_runs[0].profile_id='B';
+ check((await call('verify',{sessionId:id,attempts})).status===404,'API cannot verify another student run');
+ tables.memberships[0].role_id='PROFESSOR';
+ check((await call('start',{sessionId:id,stageId:'D1',heroId:'CHRONOMANCER'})).status===403,'Teacher cannot impersonate a student run');
+ console.log(`Campaign verification: ${passed} passed`);
+}
+void run();

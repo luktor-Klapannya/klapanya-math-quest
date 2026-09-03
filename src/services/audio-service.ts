@@ -181,13 +181,20 @@ class AudioEngineService {
         break;
       }
       case 'SFX_WRONG': {
-        const osc = ctx.createOscillator();
-        osc.type = 'sawtooth';
-        osc.frequency.setValueAtTime(220, now);
-        osc.frequency.setValueAtTime(164.81, now + 0.12);
-        osc.connect(gainNode);
-        osc.start(now);
-        osc.stop(now + 0.3);
+        const osc1 = ctx.createOscillator();
+        const osc2 = ctx.createOscillator();
+        osc1.type = 'sawtooth';
+        osc2.type = 'triangle';
+        osc1.frequency.setValueAtTime(220, now);
+        osc1.frequency.linearRampToValueAtTime(146.83, now + 0.18);
+        osc2.frequency.setValueAtTime(164.81, now);
+        osc2.frequency.linearRampToValueAtTime(110.00, now + 0.22);
+        osc1.connect(gainNode);
+        osc2.connect(gainNode);
+        osc1.start(now);
+        osc2.start(now);
+        osc1.stop(now + 0.28);
+        osc2.stop(now + 0.35);
         break;
       }
       case 'SFX_CRITICAL': {

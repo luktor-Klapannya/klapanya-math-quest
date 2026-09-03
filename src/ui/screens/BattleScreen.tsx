@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { useGameEvidence } from '../../services/game-evidence';
 import { 
   PlayerProfile, 
   QuestionItem, 
@@ -25,6 +26,7 @@ import {
   CheckCircle2, 
   XCircle, 
   ArrowRight,
+  ArrowLeft,
   Flame,
   AlertTriangle,
   RotateCcw,
@@ -32,8 +34,10 @@ import {
   Hourglass,
   Lightbulb
 } from 'lucide-react';
+import { SceneBackground } from '../components/SceneBackground';
 
 interface BattleScreenProps {
+  trustedSessionId?: string;
   stageId: string;
   stageName: string;
   questions: QuestionItem[];
@@ -44,6 +48,7 @@ interface BattleScreenProps {
 }
 
 export const BattleScreen: React.FC<BattleScreenProps> = ({
+  trustedSessionId,
   stageId,
   stageName,
   questions,
@@ -52,6 +57,7 @@ export const BattleScreen: React.FC<BattleScreenProps> = ({
   onFinishSession,
   onExitStage,
 }) => {
+  const evidence = useGameEvidence(stageId,{engine:'BATTLE_V1',stageName,isExamMode,questionIds:questions.map(q=>q.id),verifiedCampaignRun:!!trustedSessionId},trustedSessionId);
   const hero = HERO_CLASSES[profile.heroId];
   const masteryEngine = new WeightedSkillMasteryEngineV1();
 
@@ -197,6 +203,7 @@ export const BattleScreen: React.FC<BattleScreenProps> = ({
     setSelectedOptionId(chosenOptId);
 
     const timeSpentSec = Math.max(1, Math.round((Date.now() - startTime) / 1000));
+    evidence.record({ questionId:currentQ.id, selectedOptionId:chosenOptId, timeSpentSec, hintLevelUsed });
     setTotalTimeElapsed((prev) => prev + timeSpentSec);
 
     const chosenOption = shuffledOptions.find((o) => o.id === chosenOptId);
@@ -255,6 +262,7 @@ export const BattleScreen: React.FC<BattleScreenProps> = ({
     } else {
       setComboCount(0);
       setHeroEmote('HIT_SETBACK');
+      audioEngine.playSfx('SFX_WRONG');
       setTimeout(() => {
         setHeroEmote('IDLE');
       }, 700);
@@ -319,19 +327,23 @@ export const BattleScreen: React.FC<BattleScreenProps> = ({
       isMasteryMet: accuracy >= 90,
     };
 
+    evidence.finish(sessionResult);
     onFinishSession(sessionResult);
   };
 
   return (
-    <div className="min-h-screen aurora-bg p-4 md:p-8 flex flex-col justify-between text-slate-100 max-w-5xl mx-auto select-none font-sans">
-      {/* Top HUD */}
-      <header className="frost-card rounded-2xl p-4 mb-4 flex flex-wrap items-center justify-between gap-4 border border-cyan-500/40 shadow-lg">
+    <SceneBackground territoryId="FROZEN_ARCTIC" sceneType="DOJO" className="p-4 md:p-8">
+      <div className="flex-1 flex flex-col justify-between text-slate-100 max-w-5xl mx-auto w-full select-none font-sans">
+        {/* Top HUD */}
+        <header className="frost-card rounded-2xl p-4 mb-4 flex flex-wrap items-center justify-between gap-4 border border-cyan-500/40 shadow-lg">
         <div className="flex items-center gap-3">
           <button
             onClick={onExitStage}
-            className="px-3 py-1.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-xs font-bold text-slate-300"
+            className="px-3.5 py-2 rounded-2xl bg-slate-800 hover:bg-rose-950 border border-slate-600 hover:border-rose-400 text-slate-200 hover:text-rose-200 text-xs font-black flex items-center gap-1.5 transition-all shadow-md"
+            title="ออกและกลับสู่แผนที่หลัก"
           >
-            ออก
+            <ArrowLeft className="w-4 h-4 text-cyan-300" />
+            <span>🏠 กลับแผนที่</span>
           </button>
           <div>
             <h1 className="font-extrabold text-base md:text-lg text-white">{stageName}</h1>
@@ -404,11 +416,11 @@ export const BattleScreen: React.FC<BattleScreenProps> = ({
         isExamMode={isExamMode}
       />
 
-      {/* Main Question Card */}
-      <main className="frost-card rounded-2xl p-5 md:p-8 flex-1 flex flex-col justify-between shadow-2xl relative">
+      {/* Main Question Card — Bright Frosted Ice Panel (Frozen v1) */}
+      <main className="bg-white/90 backdrop-blur-md rounded-2xl p-5 md:p-8 flex-1 flex flex-col justify-between shadow-[0_8px_32px_rgba(56,189,248,0.18)] border border-sky-200/90 relative">
         {/* Topic Tag & Skill Action */}
         <div className="flex flex-wrap items-center justify-between gap-2 mb-4">
-          <span className="text-xs font-bold px-2.5 py-1 rounded-lg bg-cyan-950/80 border border-cyan-400/40 text-cyan-300">
+          <span className="text-xs font-bold px-2.5 py-1 rounded-lg bg-sky-100/90 border border-sky-300/80 text-sky-900 shadow-sm">
             {currentQ?.subtopic || currentQ?.topic}
           </span>
 
@@ -419,8 +431,8 @@ export const BattleScreen: React.FC<BattleScreenProps> = ({
                 disabled={!skillAvailable || isAnswerSubmitted}
                 className={`px-3 py-1.5 rounded-xl text-xs font-bold flex items-center gap-1.5 transition-all ${
                   skillAvailable && !isAnswerSubmitted
-                    ? 'bg-gradient-to-r from-amber-500 to-yellow-600 hover:from-amber-400 text-slate-950 shadow-glow-gold transform hover:scale-105'
-                    : 'bg-slate-800 text-slate-500 border border-slate-700 cursor-not-allowed'
+                    ? 'bg-gradient-to-r from-amber-500 to-yellow-500 hover:from-amber-400 text-slate-950 shadow-md transform hover:scale-105'
+                    : 'bg-slate-200 text-slate-400 border border-slate-300 cursor-not-allowed'
                 }`}
               >
                 <Zap className="w-3.5 h-3.5" />
@@ -433,7 +445,7 @@ export const BattleScreen: React.FC<BattleScreenProps> = ({
                   setHintLevelUsed((prev) => Math.min(2, prev + 1));
                   setShowHintModal(true);
                 }}
-                className="px-3 py-1.5 rounded-xl bg-slate-800 hover:bg-slate-700 border border-slate-600 text-cyan-300 text-xs font-bold flex items-center gap-1"
+                className="px-3 py-1.5 rounded-xl bg-sky-50 hover:bg-sky-100 border border-sky-300 text-sky-800 text-xs font-bold flex items-center gap-1 shadow-sm transition-colors"
               >
                 <HelpCircle className="w-3.5 h-3.5" /> คำใบ้
               </button>
@@ -443,14 +455,14 @@ export const BattleScreen: React.FC<BattleScreenProps> = ({
 
         {/* Question Text */}
         <div className="my-auto py-4">
-          <h2 className={`text-base md:text-xl font-black text-white leading-relaxed ${
-            isTrapGlowActive ? 'ring-2 ring-amber-400 p-3 rounded-xl bg-amber-950/40' : ''
+          <h2 className={`text-base md:text-xl font-extrabold text-slate-900 leading-relaxed ${
+            isTrapGlowActive ? 'ring-2 ring-amber-400 p-3 rounded-xl bg-amber-50 text-amber-950' : ''
           }`}>
             {currentQ?.questionText}
           </h2>
           {isTrapGlowActive && (
-            <p className="text-xs text-amber-300 font-semibold mt-2 flex items-center gap-1">
-              <ShieldAlert className="w-4 h-4 text-amber-400" /> Trap Detector: เรืองแสงจับประเด็นสำคัญในโจทย์!
+            <p className="text-xs text-amber-800 font-semibold mt-2 flex items-center gap-1">
+              <ShieldAlert className="w-4 h-4 text-amber-600" /> Trap Detector: เรืองแสงจับประเด็นสำคัญในโจทย์!
             </p>
           )}
         </div>
@@ -462,20 +474,20 @@ export const BattleScreen: React.FC<BattleScreenProps> = ({
             const isSelected = selectedOptionId === opt.id;
             const isCorrectOption = opt.isCorrect;
 
-            let optionStyle = 'bg-arctic-800/90 border-cyan-500/30 hover:border-cyan-400 text-white';
+            let optionStyle = 'bg-slate-50/90 hover:bg-sky-50/90 border-slate-200 hover:border-sky-400 text-slate-800 shadow-sm';
 
             if (isEliminated) {
-              optionStyle = 'bg-slate-900/40 border-slate-800 text-slate-600 line-through cursor-not-allowed';
+              optionStyle = 'bg-slate-100 border-slate-200 text-slate-400 line-through cursor-not-allowed opacity-50';
             } else if (isAnswerSubmitted) {
               if (isCorrectOption) {
-                optionStyle = 'bg-emerald-950 border-emerald-400 text-emerald-300 font-bold ring-2 ring-emerald-400 shadow-lg';
+                optionStyle = 'bg-emerald-50 border-emerald-500 text-emerald-900 font-bold ring-2 ring-emerald-400 shadow-md';
               } else if (isSelected && !isCorrectOption) {
-                optionStyle = 'bg-rose-950 border-rose-500 text-rose-300 font-bold';
+                optionStyle = 'bg-rose-50 border-rose-400 text-rose-900 font-bold';
               } else {
-                optionStyle = 'bg-arctic-900/60 border-slate-800 text-slate-500 opacity-50';
+                optionStyle = 'bg-slate-50 border-slate-200 text-slate-400 opacity-40';
               }
             } else if (isSelected) {
-              optionStyle = 'bg-cyan-950 border-cyan-400 ring-2 ring-cyan-400 text-cyan-200';
+              optionStyle = 'bg-sky-100 border-sky-500 ring-2 ring-sky-400 text-sky-950 shadow-md';
             }
 
             return (
@@ -483,12 +495,12 @@ export const BattleScreen: React.FC<BattleScreenProps> = ({
                 key={opt.id}
                 disabled={isAnswerSubmitted || isEliminated}
                 onClick={() => handleSubmitAnswer(opt.id)}
-                className={`p-3.5 md:p-4 rounded-xl border text-left font-medium transition-all duration-200 flex items-center gap-3 relative ${optionStyle}`}
+                className={`p-3.5 md:p-4 rounded-xl border text-left font-medium min-h-[48px] transition-all duration-200 flex items-center gap-3 relative ${optionStyle}`}
               >
-                <span className="w-7 h-7 rounded-lg bg-arctic-900 border border-slate-700 flex items-center justify-center font-bold text-xs text-cyan-300 shrink-0">
+                <span className="w-7 h-7 rounded-lg bg-white border border-sky-300 flex items-center justify-center font-bold text-xs text-sky-800 shrink-0 shadow-xs">
                   {opt.displayLetter || opt.id}
                 </span>
-                <span className="text-xs md:text-sm font-semibold">{opt.text}</span>
+                <span className="text-xs md:text-sm font-bold leading-snug">{opt.text}</span>
               </button>
             );
           })}
@@ -604,6 +616,7 @@ export const BattleScreen: React.FC<BattleScreenProps> = ({
           </div>
         </div>
       )}
-    </div>
+      </div>
+    </SceneBackground>
   );
 };

@@ -261,12 +261,16 @@ export const MapScreen: React.FC<MapScreenProps> = ({
   };
 
   return (
-    <div className="min-h-screen bg-slate-950 text-slate-100 flex flex-col relative overflow-hidden select-none font-sans">
-      {/* Dynamic Animated Environment Background */}
-      <div className="absolute inset-0 bg-gradient-to-b from-slate-950 via-cyan-950/40 to-slate-950 pointer-events-none z-0" />
+    <div className="min-h-screen bg-[#030712] text-slate-100 flex flex-col relative overflow-hidden select-none font-sans">
+      {/* 1. Cinematic Arctic Fantasy Map Background Artwork Layer */}
+      <div 
+        className="absolute inset-0 bg-cover bg-center bg-no-repeat pointer-events-none z-0 opacity-30 mix-blend-screen scale-105"
+        style={{ backgroundImage: `url('/academy_backdrop.jpg')` }}
+      />
+      <div className="absolute inset-0 bg-gradient-to-b from-[#030712]/90 via-[#03203c]/40 to-[#030712]/95 pointer-events-none z-0" />
 
       {/* Atmospheric Aurora Light Ribbons */}
-      <div className="absolute top-0 left-1/4 right-1/4 h-80 bg-gradient-to-r from-teal-500/10 via-cyan-400/20 to-blue-500/10 blur-3xl pointer-events-none z-0 animate-pulse" />
+      <div className="absolute top-0 left-1/4 right-1/4 h-80 bg-gradient-to-r from-teal-500/15 via-cyan-400/25 to-blue-500/15 blur-3xl pointer-events-none z-0 animate-pulse" />
       
       {/* Soft Mountain Ridge Contours SVG (Background Landscape) */}
       <svg className="absolute bottom-0 left-0 right-0 w-full h-96 opacity-25 pointer-events-none z-0" viewBox="0 0 1440 400" preserveAspectRatio="none">
@@ -276,13 +280,6 @@ export const MapScreen: React.FC<MapScreenProps> = ({
         <polygon points="540,120 520,150 560,150" fill="#e0f2fe" fillOpacity="0.6" />
         <polygon points="900,100 875,140 925,140" fill="#e0f2fe" fillOpacity="0.7" />
       </svg>
-
-      {/* Hero Silhouette in Bottom-Right Corner (8-12% Low Opacity, Non-intrusive) */}
-      <div className="absolute -bottom-10 -right-8 w-96 h-96 pointer-events-none opacity-10 z-0 flex items-end justify-end select-none">
-        <div className="text-[260px] leading-none filter blur-[0.5px]">
-          {hero.avatar}
-        </div>
-      </div>
 
       {/* Floating Frost Snowflakes (Lightweight CSS particles) */}
       <div className="absolute inset-0 pointer-events-none z-0 overflow-hidden">
@@ -628,16 +625,26 @@ export const MapScreen: React.FC<MapScreenProps> = ({
               </div>
             </div>
 
-            {/* Direct Action Button */}
-            <div className="mt-4 pt-3 border-t border-slate-800">
+            {/* Direct Action Buttons */}
+            <div className="mt-4 pt-3 border-t border-slate-800 space-y-2">
               <button
                 onClick={handleEnterSelectedNode}
-                className="w-full py-3.5 rounded-2xl bg-gradient-to-r from-cyan-500 via-sky-400 to-blue-600 hover:from-cyan-400 text-slate-950 font-black text-sm flex items-center justify-center gap-2 shadow-glow-cyan transform hover:scale-102 transition-all"
+                className="w-full py-3 rounded-2xl bg-gradient-to-r from-cyan-500 via-sky-400 to-blue-600 hover:from-cyan-400 text-slate-950 font-black text-sm flex items-center justify-center gap-2 shadow-glow-cyan transform hover:scale-102 transition-all"
               >
                 <Play className="w-4 h-4 fill-slate-950" />
                 <span>เข้าสู่ {selectedNode.thaiName}</span>
                 <ChevronRight className="w-4 h-4" />
               </button>
+
+              {onOpenStageDetail && (
+                <button
+                  onClick={() => onOpenStageDetail(selectedNode.id === 'DOJO' ? 'D1' : selectedNode.id === 'SHRINE' ? 'F1' : 'D1')}
+                  className="w-full py-2.5 rounded-2xl bg-blue-950/80 hover:bg-blue-900 border border-blue-400/60 text-blue-300 hover:text-white font-black text-xs flex items-center justify-center gap-1.5 transition-all shadow-md"
+                >
+                  <BookOpen className="w-3.5 h-3.5" />
+                  <span>🎓 ติวเทคนิค & สูตรลัดโซนนี้ (Tutor Room)</span>
+                </button>
+              )}
             </div>
           </div>
 

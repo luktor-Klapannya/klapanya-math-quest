@@ -4,17 +4,59 @@
 
 @layer utilities {
   .frost-card {
-    background: rgba(16, 31, 66, 0.75);
-    backdrop-filter: blur(12px);
+    background: rgba(10, 17, 40, 0.85);
+    backdrop-filter: blur(16px);
     border: 1px solid rgba(0, 240, 255, 0.25);
-    box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.37);
+    box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.6);
   }
   
   .frost-card-active {
-    background: rgba(28, 49, 102, 0.85);
-    backdrop-filter: blur(16px);
+    background: rgba(16, 31, 66, 0.9);
+    backdrop-filter: blur(20px);
     border: 1px solid rgba(0, 240, 255, 0.6);
     box-shadow: 0 0 25px rgba(0, 240, 255, 0.35);
+  }
+
+  .academy-glass {
+    background: rgba(6, 11, 25, 0.88);
+    backdrop-filter: blur(20px);
+    border: 1px solid rgba(234, 179, 8, 0.3);
+    box-shadow: 0 12px 40px 0 rgba(0, 0, 0, 0.7);
+  }
+
+  .academy-gold-border {
+    border: 1px solid rgba(234, 179, 8, 0.45);
+    box-shadow: 0 0 20px rgba(234, 179, 8, 0.2);
+  }
+
+  .academy-luminous-title {
+    text-shadow: 0 0 20px rgba(0, 240, 255, 0.4), 0 0 40px rgba(234, 179, 8, 0.25);
+  }
+
+  /* Sprint 4.5: Premium Typography & Luminous Title Treatment */
+  .academy-title-display {
+    font-family: 'Cinzel', 'Cormorant Garamond', serif;
+    letter-spacing: 0.15em;
+    background: linear-gradient(180deg, #ffffff 0%, #fef3c7 45%, #fde047 80%, #38bdf8 100%);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    filter: drop-shadow(0 2px 8px rgba(0, 0, 0, 0.8)) drop-shadow(0 0 15px rgba(56, 189, 248, 0.3));
+  }
+
+  .academy-subtitle-display {
+    font-family: 'Cinzel', 'Cormorant Garamond', serif;
+    letter-spacing: 0.25em;
+    background: linear-gradient(90deg, rgba(254, 243, 199, 0.9) 0%, rgba(56, 189, 248, 0.9) 100%);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+  }
+
+  .glass-capsule {
+    background: rgba(8, 20, 45, 0.32);
+    border: 1px solid rgba(180, 225, 255, 0.22);
+    backdrop-filter: blur(14px);
+    -webkit-backdrop-filter: blur(14px);
+    box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.37), inset 0 1px 1px 0 rgba(255, 255, 255, 0.18);
   }
 
   .text-glow-cyan {
@@ -26,8 +68,24 @@
   }
 
   .aurora-bg {
-    background: radial-gradient(circle at 50% 0%, rgba(0, 240, 255, 0.15), transparent 60%),
-                radial-gradient(circle at 100% 100%, rgba(176, 38, 255, 0.15), transparent 50%),
-                #0a1128;
+    background: radial-gradient(circle at 50% 0%, rgba(0, 240, 255, 0.12), transparent 60%),
+                radial-gradient(circle at 100% 100%, rgba(176, 38, 255, 0.12), transparent 50%),
+                #030712;
   }
 }
+
+@keyframes runeRotate {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+
+.academy-rune-spin {
+  animation: runeRotate 60s linear infinite;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .academy-rune-spin {
+    animation: none !important;
+  }
+}
+

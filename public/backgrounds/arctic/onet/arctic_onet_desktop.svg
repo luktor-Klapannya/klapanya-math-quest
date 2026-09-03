@@ -1,0 +1,24 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1920 1080" width="1920" height="1080">
+      <defs>
+        <linearGradient id="mapSky" x1="0%" y1="0%" x2="0%" y2="100%">
+          <stop offset="0%" stop-color="#020817"/>
+          <stop offset="40%" stop-color="#082f49"/>
+          <stop offset="100%" stop-color="#030712"/>
+        </linearGradient>
+        <linearGradient id="aurora" x1="0%" y1="0%" x2="100%" y2="0%">
+          <stop offset="0%" stop-color="#06b6d4" stop-opacity="0.1"/>
+          <stop offset="50%" stop-color="#38bdf8" stop-opacity="0.3"/>
+          <stop offset="100%" stop-color="#3b82f6" stop-opacity="0.1"/>
+        </linearGradient>
+      </defs>
+      <rect width="1920" height="1080" fill="url(#mapSky)"/>
+      <!-- Aurora Ribbon -->
+      <path d="M0,216 Q480,108 960,270 T1920,162 L1920,486 Q1440,324 960,432 T0,378 Z" fill="url(#aurora)"/>
+      <!-- Glacial Mountains -->
+      <path d="M0,918 L288,594 L672,810 L1056,486 L1440,756 L1728,540 L1920,864 L1920,1080 L0,1080 Z" fill="#0c4a6e" fill-opacity="0.4"/>
+      <path d="M0,972 L384,734.4000000000001 L864,918 L1344,648 L1689.6,864 L1920,777.6 L1920,1080 L0,1080 Z" fill="#082f49" fill-opacity="0.7"/>
+      <!-- Frost Caps -->
+      <polygon points="1056,486 998.4000000000001,561.6 1113.6,561.6" fill="#e0f2fe" fill-opacity="0.8"/>
+      <polygon points="288,594 230.39999999999998,669.6 345.59999999999997,669.6" fill="#e0f2fe" fill-opacity="0.7"/>
+      <polygon points="1728,540 1670.4,615.5999999999999 1785.6000000000001,615.5999999999999" fill="#e0f2fe" fill-opacity="0.7"/>
+    </svg>

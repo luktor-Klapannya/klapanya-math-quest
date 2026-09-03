@@ -1,0 +1,22 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1920 1080" width="1920" height="1080">
+      <defs>
+        <linearGradient id="arenaSky" x1="0%" y1="0%" x2="0%" y2="100%">
+          <stop offset="0%" stop-color="#020617"/>
+          <stop offset="50%" stop-color="#041f3d"/>
+          <stop offset="100%" stop-color="#020617"/>
+        </linearGradient>
+        <radialGradient id="arenaLight" cx="50%" cy="30%" r="50%">
+          <stop offset="0%" stop-color="#38bdf8" stop-opacity="0.25"/>
+          <stop offset="100%" stop-color="#020617" stop-opacity="0"/>
+        </radialGradient>
+      </defs>
+      <rect width="1920" height="1080" fill="url(#arenaSky)"/>
+      <rect width="1920" height="1080" fill="url(#arenaLight)"/>
+      <!-- Colosseum Grand Pillars -->
+      <rect x="96" y="216" width="96" height="810" rx="6" fill="#0369a1" fill-opacity="0.4"/>
+      <rect x="288" y="302.40000000000003" width="76.8" height="702" rx="6" fill="#0284c7" fill-opacity="0.3"/>
+      <rect x="1555.2" y="302.40000000000003" width="76.8" height="702" rx="6" fill="#0284c7" fill-opacity="0.3"/>
+      <rect x="1728" y="216" width="96" height="810" rx="6" fill="#0369a1" fill-opacity="0.4"/>
+      <!-- Center Competition Arena Stage -->
+      <ellipse cx="960" cy="885.5999999999999" rx="921.5999999999999" ry="151.20000000000002" fill="#082f49" fill-opacity="0.5" stroke="#38bdf8" stroke-width="2" stroke-opacity="0.5"/>
+    </svg>

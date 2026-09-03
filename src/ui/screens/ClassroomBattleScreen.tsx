@@ -13,6 +13,7 @@ import {
   Users, 
   Shield 
 } from 'lucide-react';
+import { SceneBackground } from '../components/SceneBackground';
 
 interface ClassroomBattleScreenProps {
   room: BattleRoom;
@@ -105,10 +106,11 @@ export const ClassroomBattleScreen: React.FC<ClassroomBattleScreenProps> = ({
   if (!currentQ) return null;
 
   return (
-    <div className="min-h-screen aurora-bg p-3 md:p-6 text-slate-100 font-sans select-none max-w-4xl mx-auto flex flex-col justify-between">
-      
-      {/* Top HUD: Own Rank + Score + Leaderboard */}
-      <header className="frost-card rounded-2xl p-3 md:p-4 mb-3 border-2 border-cyan-400 shadow-glow-cyan space-y-2">
+    <SceneBackground territoryId="FROZEN_ARCTIC" sceneType="ARENA_LIVE" className="p-3 md:p-6">
+      <div className="flex-1 flex flex-col justify-between text-slate-100 max-w-4xl mx-auto w-full select-none font-sans">
+        
+        {/* Top HUD: Own Rank + Score + Leaderboard */}
+        <header className="frost-card rounded-2xl p-3 md:p-4 mb-3 border-2 border-cyan-400 shadow-glow-cyan space-y-2">
         <div className="flex items-center justify-between gap-2">
           
           {/* My Rank Badge */}
@@ -195,18 +197,18 @@ export const ClassroomBattleScreen: React.FC<ClassroomBattleScreenProps> = ({
           )}
         </div>
 
-        {/* Question Text Box */}
-        <div className="frost-card rounded-3xl p-5 md:p-6 border border-cyan-500/40 shadow-inner space-y-3">
+        {/* Question Text Box — Bright Frosted Ice Panel */}
+        <div className="bg-white/90 backdrop-blur-md rounded-3xl p-5 md:p-6 border border-sky-200/90 shadow-[0_8px_32px_rgba(56,189,248,0.18)] space-y-3">
           <div className="flex items-center justify-between">
-            <span className="text-[10px] font-black px-2 py-0.5 rounded bg-cyan-950 text-cyan-300 border border-cyan-500/30">
+            <span className="text-[10px] font-black px-2 py-0.5 rounded bg-sky-100 text-sky-900 border border-sky-300">
               {currentQ.topic}
             </span>
-            <div className="flex items-center gap-1 text-xs font-mono font-bold text-amber-300">
-              <Timer className="w-3.5 h-3.5" /> {secondsLeft}s
+            <div className="flex items-center gap-1 text-xs font-mono font-bold text-sky-900">
+              <Timer className="w-3.5 h-3.5 text-sky-700" /> {secondsLeft}s
             </div>
           </div>
 
-          <h2 className="text-sm md:text-base font-bold text-white leading-relaxed">
+          <h2 className="text-sm md:text-base font-extrabold text-slate-900 leading-relaxed">
             {currentQ.questionText}
           </h2>
         </div>
@@ -220,17 +222,17 @@ export const ClassroomBattleScreen: React.FC<ClassroomBattleScreenProps> = ({
                 key={opt.id}
                 onClick={() => handleSelectOption(opt)}
                 disabled={selectedOptionId !== null}
-                className={`p-3.5 rounded-2xl border text-left font-bold text-xs md:text-sm transition-all transform hover:scale-[1.01] flex items-center justify-between ${
+                className={`p-3.5 rounded-2xl border text-left font-bold text-xs md:text-sm min-h-[48px] transition-all transform hover:scale-[1.01] flex items-center justify-between shadow-sm ${
                   isSelected
                     ? opt.isCorrect
-                      ? 'bg-emerald-950 border-emerald-400 text-emerald-300 ring-2 ring-emerald-400 shadow-glow-cyan'
-                      : 'bg-rose-950 border-rose-400 text-rose-300'
-                    : 'bg-slate-900/90 hover:bg-slate-800 border-slate-700 text-slate-100'
+                      ? 'bg-emerald-50 border-emerald-500 text-emerald-900 ring-2 ring-emerald-400 shadow-md'
+                      : 'bg-rose-50 border-rose-400 text-rose-900'
+                    : 'bg-slate-50/90 hover:bg-sky-50/90 border-slate-200 text-slate-800 hover:border-sky-400'
                 }`}
               >
                 <span>{opt.text}</span>
                 {isSelected && (
-                  opt.isCorrect ? <CheckCircle2 className="w-5 h-5 text-emerald-400" /> : <XCircle className="w-5 h-5 text-rose-400" />
+                  opt.isCorrect ? <CheckCircle2 className="w-5 h-5 text-emerald-600" /> : <XCircle className="w-5 h-5 text-rose-600" />
                 )}
               </button>
             );
@@ -242,6 +244,7 @@ export const ClassroomBattleScreen: React.FC<ClassroomBattleScreenProps> = ({
       <footer className="mt-3 text-center text-[11px] text-slate-400">
         <span>คำตอบของคุณเป็นความลับส่วนบุคคล • ลำดับตัวเลือกถูกสุ่มแยกต่อผู้เล่น 🛡️</span>
       </footer>
-    </div>
+      </div>
+    </SceneBackground>
   );
 };

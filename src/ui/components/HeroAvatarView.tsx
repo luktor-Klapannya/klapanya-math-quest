@@ -2,6 +2,7 @@ import React from 'react';
 import { PlayerProfile, HeroClassId } from '../../types';
 import { HERO_CLASSES } from '../../progression/hero-classes';
 import { TERRITORY_DATABASE } from '../../progression/territory-matrix';
+import { HeroCharacterArt } from './HeroCharacterArt';
 
 interface HeroAvatarViewProps {
   profile: PlayerProfile;
@@ -45,10 +46,17 @@ export const HeroAvatarView: React.FC<HeroAvatarViewProps> = ({
   const skillVFX = territory.skillVfx[profile.heroId];
 
   const sizeClasses = {
-    sm: 'w-10 h-10 text-xl',
-    md: 'w-14 h-14 text-3xl',
-    lg: 'w-20 h-20 text-4xl',
-    xl: 'w-28 h-28 text-6xl',
+    sm: 'w-10 h-10',
+    md: 'w-14 h-14',
+    lg: 'w-20 h-20',
+    xl: 'w-28 h-28',
+  };
+
+  const artSizeMap = {
+    sm: 'sm' as const,
+    md: 'sm' as const,
+    lg: 'md' as const,
+    xl: 'lg' as const,
   };
 
   return (
@@ -64,13 +72,13 @@ export const HeroAvatarView: React.FC<HeroAvatarViewProps> = ({
       <div
         className={`${sizeClasses[size]} rounded-2xl bg-gradient-to-tr from-cyan-950 via-slate-900 to-blue-900 border-2 ${
           profile.isTopFormUnlocked ? 'border-amber-400 shadow-glow-gold' : 'border-cyan-400/80 shadow-glow-cyan'
-        } flex items-center justify-center relative overflow-hidden transition-all duration-300`}
+        } flex items-center justify-center relative overflow-hidden transition-all duration-300 p-0.5`}
       >
         {/* Territory Frost Sparkle Background */}
         <div className="absolute inset-0 bg-cyan-500/10 pointer-events-none" />
 
-        {/* Hero Variant Icon */}
-        <span className="relative z-10">{costume.avatarVariant}</span>
+        {/* Hero 2D Character Artwork */}
+        <HeroCharacterArt avatarId={profile.avatarVisualId || 'BOY_WIZARD'} size={artSizeMap[size]} mode="PORTRAIT" />
 
         {/* Weapon Icon Sub-badge */}
         <div className="absolute bottom-0 right-0 w-5 h-5 rounded-tl-lg bg-slate-950/90 border-t border-l border-cyan-400 flex items-center justify-center text-[10px] z-15" title={`${weapon.thaiName} (${weapon.name})`}>

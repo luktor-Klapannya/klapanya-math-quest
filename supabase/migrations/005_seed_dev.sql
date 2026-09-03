@@ -1,0 +1,5 @@
+-- Reserved historical migration number. Intentionally contains no seed writes.
+-- The former demo fixture lives in ../seeds/development.sql and is loaded only
+-- by the disposable local database test runner. Normal migration application
+-- must never create demo users. Already-applied demo records require a reviewed
+-- audit/reconciliation; this migration does not delete existing data.

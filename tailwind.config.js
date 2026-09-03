@@ -29,12 +29,16 @@ export default {
         }
       },
       fontFamily: {
-        sans: ['Prompt', 'Sarabun', 'sans-serif'],
+        display: ['Cinzel', 'Cormorant Garamond', 'Georgia', 'serif'],
+        thaiSerif: ['Pridi', 'Noto Serif Thai', 'serif'],
+        sans: ['Prompt', 'Kanit', 'Noto Sans Thai', 'Sarabun', 'sans-serif'],
       },
       boxShadow: {
         'glow-cyan': '0 0 20px rgba(0, 240, 255, 0.4)',
         'glow-gold': '0 0 20px rgba(255, 215, 0, 0.4)',
         'glow-purple': '0 0 20px rgba(176, 38, 255, 0.4)',
+        'glass-crystal': '0 8px 32px 0 rgba(0, 0, 0, 0.37), inset 0 1px 1px 0 rgba(255, 255, 255, 0.15)',
+        'gold-crystal': '0 0 25px rgba(251, 191, 36, 0.35), inset 0 1px 2px 0 rgba(255, 255, 255, 0.3)',
       }
     },
   },

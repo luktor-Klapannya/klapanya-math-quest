@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { useGameEvidence } from '../../services/game-evidence';
 import { 
   PlayerProfile, 
   QuestionItem, 
@@ -35,9 +36,11 @@ interface FinalTrialScreenProps {
 export const FinalTrialScreen: React.FC<FinalTrialScreenProps> = ({
   questions,
   profile,
-  onFinishTrial,
+  onFinishTrial: finishTrial,
   onExit,
 }) => {
+  const evidence = useGameEvidence('FINAL_TRIAL',{engine:'FINAL_TRIAL_V1',questionIds:questions.map(q=>q.id)});
+  const onFinishTrial = (result: GrandmasterTrialResult) => { evidence.finish(result); finishTrial(result); };
   const masteryEngine = new WeightedSkillMasteryEngineV1();
 
   const [currentIndex, setCurrentIndex] = useState<number>(0);
@@ -157,6 +160,7 @@ export const FinalTrialScreen: React.FC<FinalTrialScreenProps> = ({
 
     questions.forEach((q, idx) => {
       const rec = answers[idx];
+      evidence.record({ questionId:q.id, selectedOptionId:rec?.selectedOptionId, numericalInput:rec?.numericalInput, timeSpentSec:rec?.timeSpentSec || 0, hintLevelUsed:0 });
       if (rec?.isMarkedForReview) markedCount++;
 
       let isQCorrect = false;

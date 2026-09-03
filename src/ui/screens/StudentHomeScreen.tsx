@@ -3,9 +3,12 @@ import { PlayerProfile, HeroClassId } from '../../types';
 import { StudentSession } from '../../types/auth';
 import { Assignment } from '../../types/assignment';
 import { assignmentService } from '../../services/assignment-service';
+import { authSession } from '../../auth/session';
+import { PersistedProgressHome } from '../components/PersistedProgressHome';
 import { HERO_CLASSES } from '../../progression/hero-classes';
 import { AVATAR_DATABASE } from '../../progression/avatar-database';
 import { getEquippedWeaponVisual } from '../../progression/weapon-visuals';
+import { HeroCharacterArt } from '../components/HeroCharacterArt';
 import { 
   Play, 
   BookOpen, 
@@ -59,11 +62,13 @@ export const StudentHomeScreen: React.FC<StudentHomeScreenProps> = ({
   const avatarVisual = (AVATAR_DATABASE as any)[profile.avatarVisualId || 'BOY_WIZARD'] || AVATAR_DATABASE.BOY_WIZARD;
   const equippedWeapon = getEquippedWeaponVisual(profile.equippedWeaponId, profile.heroId);
 
-  const assignments = assignmentService.getAssignments(session.classRoomId);
+  const realMode=authSession.getAdapterMode()==='supabase';
+  const assignments = realMode?[]:assignmentService.getAssignments(session.classRoomId);
   const activeAssignment = assignments[0];
 
   return (
     <div className="min-h-screen aurora-bg p-3 md:p-6 pb-24 text-slate-100 font-sans select-none max-w-5xl mx-auto flex flex-col justify-between">
+      {realMode&&<PersistedProgressHome key={session.userId} owner={session.userId} onContinue={onNavigateToMap}/>}
       
       {/* Top Header & Student Info */}
       <header className="frost-card rounded-2xl p-4 mb-4 border border-cyan-400/50 shadow-glow-cyan">
@@ -73,10 +78,10 @@ export const StudentHomeScreen: React.FC<StudentHomeScreenProps> = ({
           <div className="flex items-center gap-3">
             <div 
               onClick={onOpenAvatarSelect}
-              className="relative w-12 h-12 md:w-14 md:h-14 rounded-2xl bg-cyan-950 border-2 border-cyan-400 flex items-center justify-center text-3xl shadow-glow-cyan cursor-pointer transform hover:scale-105 transition-all"
+              className="relative w-12 h-12 md:w-14 md:h-14 rounded-2xl bg-cyan-950 border-2 border-cyan-400 flex items-center justify-center shadow-glow-cyan cursor-pointer transform hover:scale-105 transition-all overflow-hidden p-0.5"
               title="คลิกเพื่อเปลี่ยนรูปลักษณ์ตัวละคร"
             >
-              {avatarVisual.avatarSprite}
+              <HeroCharacterArt avatarId={profile.avatarVisualId || 'BOY_WIZARD'} size="sm" mode="PORTRAIT" />
               <div className="absolute -bottom-1 -right-1 text-xs bg-slate-900 rounded-full border border-amber-400 p-0.5">
                 {equippedWeapon.classVisual.weaponIcon}
               </div>
@@ -223,11 +228,12 @@ export const StudentHomeScreen: React.FC<StudentHomeScreenProps> = ({
             <div>
               <span className="text-[10px] font-black text-purple-400 uppercase">CLASSROOM BATTLE ARENA</span>
               <h4 className="text-xs md:text-sm font-black text-white">ลานประลองสดในห้องเรียน (Live Battle)</h4>
-              <p className="text-[11px] text-slate-300">ประลองความเร็ว 9–12 ผู้กล้า • ตอบถูกไวรับโบนัสสปีด</p>
+              <p className="text-[11px] text-slate-300">{realMode?'Arena ออนไลน์ยังไม่เปิดใน V1':'ประลองความเร็ว 9–12 ผู้กล้า • ตอบถูกไวรับโบนัสสปีด'}</p>
             </div>
 
             <button
               onClick={onNavigateToBattle}
+              disabled={realMode}
               className="px-3.5 py-2 rounded-xl bg-purple-600 hover:bg-purple-500 text-white font-black text-xs shadow-md flex items-center gap-1.5 transition-all transform hover:scale-[1.02]"
             >
               <span>⚔️ เข้าประลอง</span>
@@ -311,12 +317,12 @@ export const StudentHomeScreen: React.FC<StudentHomeScreenProps> = ({
             </div>
 
             <div className="space-y-2 text-xs">
-              {[
+              {(realMode?Object.entries(profile.skillMastery).filter(([,v])=>typeof v==='number'&&Number.isFinite(v)).map(([name,value])=>({name,score:Math.round(value*100)})):[
                 { name: 'การคำนวณ & ลำดับเลข', score: 94 },
                 { name: 'สมการ & โจทย์ปัญหาอายุ', score: 88 },
                 { name: 'อัตราส่วน ร้อยละ กำไรขาดทุน', score: 76 },
                 { name: 'เรขาคณิต 2D/3D & ทรงกระบอก', score: 82 },
-              ].map((s) => (
+              ]).map((s) => (
                 <div key={s.name}>
                   <div className="flex justify-between text-[11px] mb-0.5">
                     <span className="text-slate-300 truncate">{s.name}</span>
@@ -336,10 +342,11 @@ export const StudentHomeScreen: React.FC<StudentHomeScreenProps> = ({
       </main>
 
       {/* COMPACT BOTTOM NAVIGATION (MOBILE & TABLET) */}
-      <nav className="fixed bottom-0 left-0 right-0 z-40 bg-slate-950/95 backdrop-blur-md border-t border-slate-800 py-2 px-4 flex items-center justify-around max-w-lg mx-auto md:rounded-t-3xl md:border-x">
+      {/* Mobile Bottom Navigation Bar */}
+      <nav className="fixed bottom-0 left-0 right-0 z-40 bg-slate-950/95 backdrop-blur-md border-t border-slate-800 py-2 px-4 flex items-center justify-around max-w-lg mx-auto md:rounded-t-3xl md:border-x shadow-2xl">
         <button
           onClick={() => setActiveBottomNav('HOME')}
-          className={`flex flex-col items-center gap-0.5 text-[10px] font-bold ${
+          className={`flex flex-col items-center gap-0.5 text-[10px] font-bold min-h-[44px] justify-center ${
             activeBottomNav === 'HOME' ? 'text-cyan-400' : 'text-slate-400 hover:text-white'
           }`}
         >
@@ -351,7 +358,7 @@ export const StudentHomeScreen: React.FC<StudentHomeScreenProps> = ({
 
         <button
           onClick={onNavigateToMap}
-          className="flex flex-col items-center gap-0.5 text-[10px] font-bold text-slate-400 hover:text-white"
+          className="flex flex-col items-center gap-0.5 text-[10px] font-bold text-slate-400 hover:text-white min-h-[44px] justify-center"
         >
           <div className="p-1 rounded-xl">🗺️</div>
           <span>แผนที่</span>
@@ -360,7 +367,7 @@ export const StudentHomeScreen: React.FC<StudentHomeScreenProps> = ({
         {/* HIGH PRIORITY TUTOR TAB */}
         <button
           onClick={() => onNavigateToTutor('D1')}
-          className="flex flex-col items-center gap-0.5 text-[10px] font-bold text-cyan-300"
+          className="flex flex-col items-center gap-0.5 text-[10px] font-bold text-cyan-300 min-h-[44px] justify-center"
         >
           <div className="p-1 rounded-xl bg-cyan-500 text-slate-950 shadow-glow-cyan transform -translate-y-1">
             📖
@@ -369,16 +376,17 @@ export const StudentHomeScreen: React.FC<StudentHomeScreenProps> = ({
         </button>
 
         <button
-          onClick={onOpenInventory}
-          className="flex flex-col items-center gap-0.5 text-[10px] font-bold text-slate-400 hover:text-white"
+          onClick={onNavigateToBattle}
+          disabled={realMode}
+          className="flex flex-col items-center gap-0.5 text-[10px] font-bold text-amber-400 hover:text-amber-300 min-h-[44px] justify-center"
         >
-          <div className="p-1 rounded-xl">🎒</div>
-          <span>คลัง</span>
+          <div className="p-1 rounded-xl">⚔️</div>
+          <span>ประลอง</span>
         </button>
 
         <button
           onClick={onOpenAvatarSelect}
-          className="flex flex-col items-center gap-0.5 text-[10px] font-bold text-slate-400 hover:text-white"
+          className="flex flex-col items-center gap-0.5 text-[10px] font-bold text-slate-400 hover:text-white min-h-[44px] justify-center"
         >
           <div className="p-1 rounded-xl">👤</div>
           <span>ฮีโร่</span>
