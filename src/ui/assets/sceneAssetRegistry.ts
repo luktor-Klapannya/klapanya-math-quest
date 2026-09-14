@@ -34,7 +34,7 @@ export interface ResponsiveSceneAsset {
 
 export const SCENE_ASSET_REGISTRY: Record<SceneAssetKey, ResponsiveSceneAsset> = {
   PORTAL: {
-    desktop: '/backgrounds/portal/portal_desktop.jpg',
+    desktop: '/backgrounds/portal/portal_desktop.png',
     tablet: '/backgrounds/portal/portal_tablet.jpg',
     mobile: '/backgrounds/portal/portal_mobile.jpg',
     fallbackGradient: 'from-[#030712] via-[#050d24] to-[#030712]',
@@ -42,17 +42,17 @@ export const SCENE_ASSET_REGISTRY: Record<SceneAssetKey, ResponsiveSceneAsset> =
     particleType: 'MAGIC_RUNES',
   },
   LOGIN: {
-    desktop: '/backgrounds/portal/login_desktop.jpg',
-    tablet: '/backgrounds/portal/login_tablet.jpg',
-    mobile: '/backgrounds/portal/login_mobile.jpg',
+    desktop: '/backgrounds/portal/login_desktop.png',
+    tablet: '/backgrounds/portal/login_desktop.png',
+    mobile: '/backgrounds/portal/login_mobile.png',
     fallbackGradient: 'from-[#030712] via-[#0b132b] to-[#030712]',
     auroraGlow: 'from-blue-600/20 via-cyan-500/25 to-amber-500/15',
     particleType: 'MAGIC_RUNES',
   },
   GUIDE: {
-    desktop: '/backgrounds/portal/guide_desktop.jpg',
-    tablet: '/backgrounds/portal/guide_tablet.jpg',
-    mobile: '/backgrounds/portal/guide_mobile.jpg',
+    desktop: '/backgrounds/portal/guide-academy/academy_guide_desktop.png',
+    tablet: '/backgrounds/portal/guide-academy/academy_guide_desktop.png',
+    mobile: '/backgrounds/portal/guide-academy/academy_guide_mobile.png',
     fallbackGradient: 'from-[#030712] via-[#050d24] to-[#030712]',
     auroraGlow: 'from-sky-600/20 via-cyan-400/25 to-blue-600/15',
     particleType: 'MAGIC_RUNES',
@@ -66,8 +66,8 @@ export const SCENE_ASSET_REGISTRY: Record<SceneAssetKey, ResponsiveSceneAsset> =
     particleType: 'MAGIC_RUNES',
   },
   ARCTIC_HERO_SELECT: {
-    desktop: '/backgrounds/arctic/hero-select/arctic_hero_select_blank_desktop.jpg',
-    tablet: '/backgrounds/arctic/hero-select/arctic_hero_select_blank_desktop.jpg',
+    desktop: '/backgrounds/arctic/hero-select/arctic_hero_select_shell_desktop.png',
+    tablet: '/backgrounds/arctic/hero-select/arctic_hero_select_shell_desktop.png',
     mobile: '/backgrounds/arctic/hero-select/arctic_hero_select_mobile.jpg',
     fallbackGradient: 'from-[#030712] via-[#051129] to-[#030712]',
     auroraGlow: 'from-cyan-500/20 via-blue-600/25 to-amber-400/15',
