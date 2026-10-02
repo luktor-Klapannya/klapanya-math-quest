@@ -1,17 +1,6 @@
-import React, { useState } from 'react';
-import { TutorLesson } from '../../types/learning';
-import { 
-  GraduationCap, 
-  Sparkles, 
-  AlertTriangle, 
-  CheckCircle2, 
-  ArrowLeft, 
-  ChevronRight, 
-  HelpCircle, 
-  Target,
-  Play,
-  RotateCcw
-} from 'lucide-react';
+import React, { useMemo, useState } from 'react';
+import type { TutorLesson } from '../../types/learning';
+import { AlertTriangle, ArrowLeft, CheckCircle2, ChevronRight, FileImage, GraduationCap, Play, Sparkles, Target } from 'lucide-react';
 
 interface TutorRoomScreenProps {
   lesson: TutorLesson;
@@ -20,252 +9,124 @@ interface TutorRoomScreenProps {
   onBack: () => void;
 }
 
-export const TutorRoomScreen: React.FC<TutorRoomScreenProps> = ({
-  lesson,
-  onFinishLessonAndStartDrill,
-  onFinishLessonAndPlayStage,
-  onBack,
-}) => {
+export const TutorRoomScreen: React.FC<TutorRoomScreenProps> = ({ lesson, onFinishLessonAndStartDrill, onFinishLessonAndPlayStage, onBack }) => {
   const [activeStep, setActiveStep] = useState<number>(1);
   const [selectedTryOption, setSelectedTryOption] = useState<string | null>(null);
   const [tryResultChecked, setTryResultChecked] = useState<boolean>(false);
 
   const steps = lesson.steps;
   const tryQuestion = steps.tryOneQuestion;
-
-  const handleSelectTryOption = (optId: string) => {
-    if (tryResultChecked) return;
-    setSelectedTryOption(optId);
-  };
-
-  const handleCheckTryOption = () => {
-    setTryResultChecked(true);
-  };
-
   const isTryCorrect = tryQuestion.options.find((o: { id: string; text: string; isCorrect: boolean }) => o.id === selectedTryOption)?.isCorrect || false;
 
+  const lessonSteps = useMemo(() => [
+    { num: 1, label: 'แนวคิด', title: 'แนวคิดหลักของบทเรียน', body: steps.concept },
+    { num: 2, label: 'หลักการ', title: 'หลักการสำคัญที่ต้องจำ', body: steps.keyPrinciple },
+    { num: 3, label: 'สูตรลัด', title: 'Technique / สูตรลัด', body: steps.shortcut },
+    { num: 4, label: 'จุดลวง', title: 'ข้อควรระวังในข้อสอบ', body: steps.commonTrap },
+    { num: 5, label: 'ตัวอย่าง', title: 'ตัวอย่างพร้อมวิธีคิด', body: steps.workedExample.problem },
+    { num: 6, label: 'ลองทำ', title: 'Try One Challenge', body: tryQuestion.questionText },
+  ], [steps, tryQuestion.questionText]);
+
+  const pageAssets = [
+    '/ui/arctic-library/library-background-desktop.png',
+    '/ui/arctic-library/open-book-panel.png',
+    '/ui/arctic-library/parchment-stage-panel.png',
+    '/ui/arctic-library/crystal-crest.png',
+  ];
+
+  const current = lessonSteps.find((step) => step.num === activeStep) || lessonSteps[0];
+
+  const renderStepBody = () => {
+    if (activeStep === 5) {
+      return (
+        <div className="space-y-4">
+          <div className="rounded-2xl border border-sky-200 bg-white/80 p-4 text-base font-black leading-7 text-slate-900 shadow-inner">{steps.workedExample.problem}</div>
+          <div className="space-y-2 border-l border-amber-300 pl-4">
+            {steps.workedExample.stepByStep.map((step, idx) => <p key={idx} className="text-sm font-semibold leading-7 text-slate-700">{step}</p>)}
+          </div>
+          <div className="rounded-2xl bg-emerald-100 px-4 py-3 text-sm font-black text-emerald-800">คำตอบที่ถูกต้อง: {steps.workedExample.answer}</div>
+        </div>
+      );
+    }
+
+    if (activeStep === 6) {
+      return (
+        <div className="space-y-4">
+          <p className="rounded-2xl border border-sky-200 bg-white/80 p-4 text-base font-black leading-7 text-slate-900 shadow-inner">{tryQuestion.questionText}</p>
+          <div className="grid gap-3 sm:grid-cols-2">
+            {tryQuestion.options.map((opt: { id: string; text: string; isCorrect: boolean }) => {
+              const isSelected = selectedTryOption === opt.id;
+              let stateClass = '';
+              if (isSelected && !tryResultChecked) stateClass = 'is-selected';
+              if (tryResultChecked && opt.isCorrect) stateClass = 'is-correct';
+              if (tryResultChecked && isSelected && !opt.isCorrect) stateClass = 'is-wrong';
+              return <button key={opt.id} onClick={() => !tryResultChecked && setSelectedTryOption(opt.id)} className={`tutor-option ${stateClass}`}>{opt.text}</button>;
+            })}
+          </div>
+          {!tryResultChecked ? (
+            <button onClick={() => setTryResultChecked(true)} disabled={!selectedTryOption} className="tutor-blue-button w-full disabled:cursor-not-allowed disabled:opacity-50">ตรวจคำตอบทันที</button>
+          ) : (
+            <div className={`flex items-start gap-3 rounded-2xl border p-4 text-sm font-bold leading-6 ${isTryCorrect ? 'border-emerald-300 bg-emerald-100 text-emerald-800' : 'border-rose-300 bg-rose-100 text-rose-800'}`}>
+              {isTryCorrect ? <CheckCircle2 className="mt-0.5 h-5 w-5 shrink-0" /> : <AlertTriangle className="mt-0.5 h-5 w-5 shrink-0" />}
+              <span>{isTryCorrect ? 'ถูกต้องยอดเยี่ยม! คุณเข้าใจหลักการของบทเรียนนี้แล้ว' : `ยังไม่ถูกต้อง: ${tryQuestion.explanation}`}</span>
+            </div>
+          )}
+        </div>
+      );
+    }
+
+    return <p className="text-base font-semibold leading-8 text-slate-700 md:text-lg">{current.body}</p>;
+  };
+
   return (
-    <div className="min-h-screen aurora-bg p-4 md:p-8 flex flex-col justify-between text-slate-100 max-w-4xl mx-auto select-none font-sans">
-      {/* Top Header */}
-      <div className="flex items-center justify-between mb-4">
-        <button
-          onClick={onBack}
-          className="px-4 py-2.5 rounded-2xl bg-slate-800 hover:bg-slate-700 text-white flex items-center gap-2 text-xs md:text-sm font-bold border-2 border-cyan-400/60 shadow-glow-cyan transition-all transform hover:scale-105"
-        >
-          <ArrowLeft className="w-4 h-4 md:w-5 md:h-5 text-cyan-400" />
-          <span>🏠 กลับสู่แผนที่หลัก (Back to Map)</span>
-        </button>
+    <div className="tutor-library-shell select-none">
+      <main className="tutor-stage tutor-room-stage grid min-h-screen content-center gap-4 lg:grid-cols-[300px_minmax(0,1fr)]">
+        <aside className="tutor-parchment-panel relative z-10 p-4">
+          <button onClick={onBack} className="tutor-back-button mb-5"><ArrowLeft className="h-5 w-5" /> กลับภาพรวม</button>
+          <img src="/ui/arctic-library/crystal-crest.png" alt="" aria-hidden="true" className="mx-auto h-14 w-14 object-contain" />
+          <h1 className="mt-2 text-center text-xl font-black leading-tight text-[#09245d]">{lesson.thaiTitle}</h1>
+          <p className="mt-2 text-center text-xs font-bold leading-5 text-slate-700">ห้องติว {lesson.targetMinutes} นาที · เรียนทีละขั้นก่อนฝึกโจทย์จริง</p>
+          <nav className="mt-4 grid gap-2" aria-label="ขั้นตอนบทเรียน">
+            {lessonSteps.map((step) => <button key={step.num} onClick={() => setActiveStep(step.num)} className={`tutor-step-tab text-left text-sm font-black ${activeStep === step.num ? 'is-active' : ''}`}><span className="mr-2 opacity-75">{step.num}</span>{step.label}</button>)}
+          </nav>
+        </aside>
 
-        <div className="flex items-center gap-2">
-          <GraduationCap className="w-5 h-5 text-blue-400" />
-          <span className="text-xs text-blue-300 font-bold px-3 py-1 rounded-xl bg-blue-950/80 border border-blue-500/40">
-            TUTOR ROOM • บทเรียนลัด {lesson.targetMinutes} นาที
-          </span>
-        </div>
-      </div>
-
-      {/* Main Instructional Deck */}
-      <div className="frost-card rounded-3xl p-6 md:p-8 border-2 border-blue-400 shadow-glow-cyan flex-1 flex flex-col justify-between mb-4">
-        <div>
-          {/* Lesson Title */}
-          <div className="pb-3 border-b border-slate-700/80">
-            <span className="text-[10px] font-black text-blue-400 uppercase tracking-widest">
-              {lesson.stageId} • LESSON MASTER
-            </span>
-            <h1 className="text-lg md:text-2xl font-black text-white mt-0.5">
-              {lesson.thaiTitle}
-            </h1>
+        <section className="tutor-book-panel relative z-10 overflow-hidden p-4 md:p-5 lg:p-6">
+          <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
+            <div className="tutor-blue-ribbon px-4 py-2 text-xs font-black"><GraduationCap className="mr-2 inline h-4 w-4" /> TUTOR ROOM</div>
+            <div className="text-sm font-black text-[#0b3c89]">ขั้นที่ {activeStep} จาก 6</div>
           </div>
 
-          {/* 7-Step Navigation Progress Bar */}
-          <div className="grid grid-cols-6 gap-1.5 my-4 text-center">
-            {[
-              { num: 1, label: '1. แนวคิด' },
-              { num: 2, label: '2. หลักการ' },
-              { num: 3, label: '3. สูตรลัด' },
-              { num: 4, label: '4. จุดลวง' },
-              { num: 5, label: '5. ตัวอย่าง' },
-              { num: 6, label: '6. ลองทำ' },
-            ].map((st) => (
-              <button
-                key={st.num}
-                onClick={() => setActiveStep(st.num)}
-                className={`py-1.5 px-1 rounded-xl text-[11px] font-bold transition-all border ${
-                  activeStep === st.num
-                    ? 'bg-blue-600 border-blue-300 text-white shadow-md ring-2 ring-blue-400'
-                    : 'bg-arctic-950/60 border-slate-800 text-slate-400 hover:text-white'
-                }`}
-              >
-                {st.label}
-              </button>
-            ))}
+          <div className="rounded-[24px] border border-amber-200/70 bg-white/60 p-4 shadow-inner md:p-5">
+            <div className="mb-4 flex items-center gap-3">
+              <span className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-sky-100 text-sky-700"><Sparkles className="h-6 w-6" /></span>
+              <div>
+                <h2 className="text-xl font-black text-[#09245d] md:text-3xl">{current.title}</h2>
+                <p className="mt-1 text-sm font-bold text-slate-600">{lesson.stageId} · {current.label}</p>
+              </div>
+            </div>
+            {renderStepBody()}
           </div>
 
-          {/* Step 1: Concept */}
-          {activeStep === 1 && (
-            <div className="p-5 rounded-2xl bg-blue-950/40 border border-blue-500/30 space-y-2 animate-scale-up">
-              <h3 className="text-sm font-black text-blue-300 flex items-center gap-2">
-                💡 1. แนวคิดหลักของบทเรียน (Core Concept)
-              </h3>
-              <p className="text-xs text-slate-200 leading-relaxed">{steps.concept}</p>
+          <div className="mt-4 rounded-2xl border border-sky-200/70 bg-sky-50/75 p-3 text-left text-xs font-semibold leading-5 text-slate-700">
+            <div className="mb-2 flex items-center gap-2 font-black text-sky-900"><FileImage className="h-4 w-4" /> ไฟล์ภาพที่หน้านี้ใช้จริง</div>
+            <div className="grid gap-1 sm:grid-cols-2">
+              {pageAssets.map((asset) => <code key={asset} className="truncate rounded-lg bg-white/80 px-2 py-1 text-[11px] text-slate-700">{asset}</code>)}
             </div>
-          )}
-
-          {/* Step 2: Key Principle */}
-          {activeStep === 2 && (
-            <div className="p-5 rounded-2xl bg-cyan-950/40 border border-cyan-500/30 space-y-2 animate-scale-up">
-              <h3 className="text-sm font-black text-cyan-300 flex items-center gap-2">
-                📐 2. หลักการสำคัญที่ต้องจำ (Key Principle)
-              </h3>
-              <p className="text-xs text-slate-200 leading-relaxed font-semibold">{steps.keyPrinciple}</p>
-            </div>
-          )}
-
-          {/* Step 3: Shortcut */}
-          {activeStep === 3 && (
-            <div className="p-5 rounded-2xl bg-amber-950/40 border border-amber-500/40 space-y-2 animate-scale-up">
-              <h3 className="text-sm font-black text-amber-300 flex items-center gap-2">
-                ⚡ 3. สูตรลัดและวิธีคิดไว (Shortcut & Fast Technique)
-              </h3>
-              <p className="text-xs font-mono text-amber-200 font-bold leading-relaxed">{steps.shortcut}</p>
-            </div>
-          )}
-
-          {/* Step 4: Common Trap */}
-          {activeStep === 4 && (
-            <div className="p-5 rounded-2xl bg-rose-950/40 border border-rose-500/30 space-y-2 animate-scale-up">
-              <h3 className="text-sm font-black text-rose-300 flex items-center gap-2">
-                ⚠️ 4. ข้อควรระวังและจุดลวงในข้อสอบ (Common Trap)
-              </h3>
-              <p className="text-xs text-slate-200 leading-relaxed">{steps.commonTrap}</p>
-            </div>
-          )}
-
-          {/* Step 5: Worked Example */}
-          {activeStep === 5 && (
-            <div className="p-5 rounded-2xl bg-arctic-950/90 border border-slate-700 space-y-3 animate-scale-up text-xs">
-              <h3 className="text-sm font-black text-emerald-300 flex items-center gap-2">
-                📝 5. ตัวอย่างโจทย์และวิธีคิดอย่างเป็นขั้นตอน
-              </h3>
-              <div className="p-3 rounded-xl bg-slate-900 border border-slate-800 font-bold text-white">
-                {steps.workedExample.problem}
-              </div>
-              <div className="space-y-1 pl-2 border-l-2 border-emerald-500/50">
-                {steps.workedExample.stepByStep.map((s, idx) => (
-                  <div key={idx} className="text-slate-300 text-[11px] leading-relaxed">
-                    {s}
-                  </div>
-                ))}
-              </div>
-              <div className="pt-2 text-xs font-black text-emerald-300 border-t border-slate-800">
-                👉 คำตอบที่ถูกต้อง: {steps.workedExample.answer}
-              </div>
-            </div>
-          )}
-
-          {/* Step 6: Try One Interactive Question */}
-          {activeStep === 6 && (
-            <div className="p-5 rounded-2xl bg-arctic-950/90 border border-slate-700 space-y-3 animate-scale-up text-xs">
-              <h3 className="text-sm font-black text-amber-300 flex items-center gap-2">
-                🎯 6. ลองทำโจทย์จริง 1 ข้อ (Try One Challenge)
-              </h3>
-              <p className="text-xs font-bold text-white leading-relaxed">
-                {tryQuestion.questionText}
-              </p>
-
-              {/* 4 Options */}
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5 my-2">
-                {tryQuestion.options.map((opt: { id: string; text: string; isCorrect: boolean }) => {
-                  const isSelected = selectedTryOption === opt.id;
-                  let optStyle = 'bg-slate-900 border-slate-700 text-slate-200 hover:border-blue-400';
-                  if (isSelected && !tryResultChecked) {
-                    optStyle = 'bg-blue-950 border-blue-400 ring-2 ring-blue-400 text-white';
-                  } else if (tryResultChecked) {
-                    if (opt.isCorrect) {
-                      optStyle = 'bg-emerald-950 border-emerald-400 text-emerald-300 font-bold';
-                    } else if (isSelected && !opt.isCorrect) {
-                      optStyle = 'bg-rose-950 border-rose-400 text-rose-300 line-through';
-                    }
-                  }
-
-                  return (
-                    <button
-                      key={opt.id}
-                      onClick={() => handleSelectTryOption(opt.id)}
-                      className={`p-3 rounded-xl border text-left transition-all text-xs ${optStyle}`}
-                    >
-                      {opt.text}
-                    </button>
-                  );
-                })}
-              </div>
-
-              {/* Check Answer Button & Feedback */}
-              {!tryResultChecked ? (
-                <button
-                  onClick={handleCheckTryOption}
-                  disabled={!selectedTryOption}
-                  className={`w-full py-2.5 rounded-xl font-black text-xs transition-all ${
-                    selectedTryOption
-                      ? 'bg-blue-600 hover:bg-blue-500 text-white shadow-md'
-                      : 'bg-slate-800 text-slate-500 cursor-not-allowed'
-                  }`}
-                >
-                  ตรวจคำตอบทันที
-                </button>
-              ) : (
-                <div className={`p-3 rounded-xl border text-xs font-bold flex items-center gap-2 ${
-                  isTryCorrect ? 'bg-emerald-950/80 border-emerald-400 text-emerald-300' : 'bg-rose-950/80 border-rose-400 text-rose-300'
-                }`}>
-                  {isTryCorrect ? <CheckCircle2 className="w-4 h-4" /> : <AlertTriangle className="w-4 h-4" />}
-                  <span>{isTryCorrect ? 'ถูกต้องยอดเยี่ยม! คุณเข้าใจหลักการของบทเรียนนี้แล้ว' : 'ยังไม่ถูกต้อง: ' + tryQuestion.explanation}</span>
-                </div>
-              )}
-            </div>
-          )}
-        </div>
-
-        {/* Bottom Actions */}
-        <div className="mt-6 pt-4 border-t border-slate-800 flex flex-wrap items-center justify-between gap-3">
-          <div className="flex items-center gap-2">
-            {activeStep > 1 && (
-              <button
-                onClick={() => setActiveStep(activeStep - 1)}
-                className="px-3.5 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs font-bold"
-              >
-                ขั้นตอนก่อนหน้า
-              </button>
-            )}
-            {activeStep < 6 && (
-              <button
-                onClick={() => setActiveStep(activeStep + 1)}
-                className="px-3.5 py-2 rounded-xl bg-blue-600 hover:bg-blue-500 text-white text-xs font-bold flex items-center gap-1 shadow-md"
-              >
-                <span>ขั้นตอนถัดไป</span>
-                <ChevronRight className="w-3.5 h-3.5" />
-              </button>
-            )}
           </div>
 
-          <div className="flex items-center gap-2.5">
-            <button
-              onClick={onFinishLessonAndStartDrill}
-              className="px-4 py-2.5 rounded-xl bg-purple-600 hover:bg-purple-500 text-white text-xs font-black flex items-center gap-1.5 shadow-md"
-            >
-              <Target className="w-4 h-4" />
-              <span>เริ่มทำดริลล์ฝึกทักษะ (Start Drill)</span>
-            </button>
-
-            <button
-              onClick={onFinishLessonAndPlayStage}
-              className="px-4 py-2.5 rounded-xl bg-gradient-to-r from-cyan-500 to-sky-400 hover:from-cyan-400 text-slate-950 text-xs font-black flex items-center gap-1.5 shadow-glow-cyan"
-            >
-              <Play className="w-4 h-4 fill-slate-950" />
-              <span>เข้าเล่นด่านจริง (Play Stage)</span>
-            </button>
+          <div className="mt-4 flex flex-col gap-3 xl:flex-row xl:items-center xl:justify-between">
+            <div className="flex flex-wrap gap-2">
+              {activeStep > 1 && <button onClick={() => setActiveStep(activeStep - 1)} className="tutor-ghost-button">ขั้นก่อนหน้า</button>}
+              {activeStep < 6 && <button onClick={() => setActiveStep(activeStep + 1)} className="tutor-ice-button">ขั้นถัดไป <ChevronRight className="h-4 w-4" /></button>}
+            </div>
+            <div className="grid gap-2 sm:grid-cols-2">
+              <button onClick={onFinishLessonAndStartDrill} className="tutor-blue-button"><Target className="h-5 w-5" /> ฝึกโจทย์ใน Tutor</button>
+              <button onClick={onFinishLessonAndPlayStage} className="tutor-gold-button"><Play className="h-5 w-5 fill-current" /> เล่นด่านจริง</button>
+            </div>
           </div>
-        </div>
-      </div>
+        </section>
+      </main>
     </div>
   );
 };

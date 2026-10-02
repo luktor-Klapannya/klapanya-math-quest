@@ -123,3 +123,17 @@ export const TUTOR_LESSONS: Record<string, TutorLesson> = {
 export function getTutorLessonForStage(stageId: string): TutorLesson {
   return TUTOR_LESSONS[stageId] || TUTOR_LESSONS.D1;
 }
+
+/** Uses existing canonical questions only; Tutor practice never mutates the corpus. */
+export function getTutorPracticeQuestions(stageId:string){
+  const pools:Record<string,typeof DOJO_QUESTIONS.D1>={
+    D1:DOJO_QUESTIONS.D1,
+    D5:DOJO_QUESTIONS.D5,
+    D6:DOJO_QUESTIONS.D6,
+    'ONET-3':ONET_QUESTIONS['ONET-3'],
+    FORBIDDEN_GEOMETRY_RUINS:GEOMETRY_QUESTIONS,
+  };
+  const lesson=getTutorLessonForStage(stageId);
+  const pool=pools[lesson.stageId]||DOJO_QUESTIONS.D1;
+  return pool.slice(0,5);
+}

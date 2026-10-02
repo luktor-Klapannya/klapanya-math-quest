@@ -66,9 +66,9 @@ export const SCENE_ASSET_REGISTRY: Record<SceneAssetKey, ResponsiveSceneAsset> =
     particleType: 'MAGIC_RUNES',
   },
   ARCTIC_HERO_SELECT: {
-    desktop: '/backgrounds/arctic/hero-select/arctic_hero_select_shell_desktop.png',
-    tablet: '/backgrounds/arctic/hero-select/arctic_hero_select_shell_desktop.png',
-    mobile: '/backgrounds/arctic/hero-select/arctic_hero_select_mobile.jpg',
+    desktop: '/backgrounds/arctic/hero-select/arctic_hero_select_panel_20260922.png',
+    tablet: '/backgrounds/arctic/hero-select/arctic_hero_select_approved_mobile.png',
+    mobile: '/backgrounds/arctic/hero-select/arctic_hero_select_approved_mobile.png',
     fallbackGradient: 'from-[#030712] via-[#051129] to-[#030712]',
     auroraGlow: 'from-cyan-500/20 via-blue-600/25 to-amber-400/15',
     particleType: 'MAGIC_RUNES',

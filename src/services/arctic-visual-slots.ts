@@ -1,5 +1,6 @@
 // Presentation only. These keys never select questions or change game rules.
 export const ARCTIC_VISUAL_SLOTS = [
+  {id:'heroSelect',en:'Hero Selection',th:'หน้าเลือกฮีโร่',asset:'ARCTIC_HERO_SELECT'},
   {id:'worldMap',en:'World Map',th:'แผนที่โลก',asset:'ARCTIC_MAP'},
   {id:'dojo',en:'Training Dojo / Ice Gym',th:'โดโจฝึกฝน / ยิมน้ำแข็ง',asset:'ARCTIC_DOJO'},
   {id:'farming',en:'Farming Shrine / Treasure Cave',th:'ศาลาฟาร์ม / ถ้ำสมบัติ',asset:'ARCTIC_FARMING'},

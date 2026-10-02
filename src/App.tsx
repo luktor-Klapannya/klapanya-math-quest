@@ -26,7 +26,7 @@ import { ALL_GEOMETRY_QUESTIONS } from './content/geometry-database';
 import { ALL_QUEST_QUESTIONS } from './content/quest-database';
 import { sampleGrandmasterTrialQuestions } from './engine/trial-sampler';
 import { evaluateTopFormEligibility } from './progression/top-form';
-import { getTutorLessonForStage } from './progression/tutor-database';
+import { getTutorLessonForStage, getTutorPracticeQuestions } from './progression/tutor-database';
 import { generateDrillSession } from './engine/drill-engine';
 import { generateDailyQuestSession } from './engine/daily-quest-engine';
 
@@ -37,6 +37,10 @@ import { ArcticHeroSelectScreen } from './ui/screens/ArcticHeroSelectScreen';
 import { MapScreen } from './ui/screens/MapScreen';
 import { StageDetailScreen } from './ui/screens/StageDetailScreen';
 import { TutorRoomScreen } from './ui/screens/TutorRoomScreen';
+import { TutorCatalogScreen } from './ui/screens/TutorCatalogScreen';
+import { TutorTopicOverviewScreen } from './ui/screens/TutorTopicOverviewScreen';
+import { TutorResultScreen } from './ui/screens/TutorResultScreen';
+import { TutorPracticeScreen } from './ui/screens/TutorPracticeScreen';
 import { DrillCenterScreen } from './ui/screens/DrillCenterScreen';
 import { SkillInventoryScreen } from './ui/screens/SkillInventoryScreen';
 import { BattleScreen } from './ui/screens/BattleScreen';
@@ -46,6 +50,7 @@ import { ShrineResultScreen } from './ui/screens/ShrineResultScreen';
 import { GatewayExamScreen } from './ui/screens/GatewayExamScreen';
 import { GatewayResultScreen } from './ui/screens/GatewayResultScreen';
 import { BossArenaScreen } from './ui/screens/BossArenaScreen';
+import { ArenaTemplatePreviewScreen } from './ui/screens/ArenaTemplatePreviewScreen';
 import { BossResultScreen } from './ui/screens/BossResultScreen';
 import { GeometryScreen } from './ui/screens/GeometryScreen';
 import { QuestBoardScreen } from './ui/screens/QuestBoardScreen';
@@ -59,7 +64,7 @@ import { LoginScreen } from './ui/screens/LoginScreen';
 import { LandingScreen } from './ui/screens/LandingScreen';
 import { StudentHomeScreen } from './ui/screens/StudentHomeScreen';
 import { TeacherHomeScreen } from './ui/screens/TeacherHomeScreen';
-import { PersistedProgressHome } from './ui/components/PersistedProgressHome';
+import { TeacherAssignmentsScreen } from './ui/screens/TeacherAssignmentsScreen';
 import { VerifiedCampaignGate } from './ui/components/VerifiedCampaignGate';
 import { VerifiedCampaignResult } from './ui/components/VerifiedCampaignResult';
 import { AdminAccessGuard } from './ui/components/AdminAccessGuard';
@@ -77,50 +82,52 @@ import { flushGameEvidence } from './services/game-evidence';
 import { CloudOwnedProgress, DemoOwnedProgress, freshProfile, supabaseProgressTransport } from './storage/owned-progress';
 import { UserSession, StudentSession, TeacherSession } from './types/auth';
 import { BattleRoom, BattlePlayerState } from './types/battle';
-
-type AppScreen = 
-  | 'LANDING'
-  | 'STUDENT_LOGIN'
-  | 'TEACHER_LOGIN'
-  | 'LOGIN'
-  | 'STUDENT_HOME'
-  | 'TEACHER_HOME'
-  | 'BATTLE_LOBBY'
-  | 'CLASSROOM_BATTLE'
-  | 'BATTLE_REVIEW'
-  | 'TEACHER_BATTLE_CONSOLE'
-  | 'AVATAR_SELECT'
-  | 'HERO_SELECT' 
-  | 'MAP' 
-  | 'STAGE_DETAIL'
-  | 'TUTOR_ROOM'
-  | 'DRILL_CENTER'
-  | 'DRILL_SESSION'
-  | 'SKILL_INVENTORY'
-  | 'DOJO_BATTLE' 
-  | 'DOJO_RESULT' 
-  | 'SHRINE_BATTLE' 
-  | 'SHRINE_RESULT'
-  | 'GATEWAY_EXAM'
-  | 'GATEWAY_RESULT'
-  | 'BOSS_BATTLE'
-  | 'BOSS_RESULT'
-  | 'GEOMETRY'
-  | 'QUEST_BOARD'
-  | 'FINAL_TRIAL'
-  | 'TOP_FORM_CEREMONY'
-  | 'INVENTORY'
-  | 'REVIEW_HUB'
-  | 'STAFF_LOGIN'
-  | 'ADMIN_CONSOLE';
+import type { AppScreen } from './ui/game-ui/runtime-screens';
+import { activityReturnDestination, postLoginDestination, type ActivityOrigin } from './services/navigation-continuity';
 
 export const App: React.FC = () => {
-  const [profile, setProfile] = useState<PlayerProfile>(DEFAULT_PROFILE);
-  const [currentScreen, setCurrentScreen] = useState<AppScreen>(()=>entryScreen(window.location.pathname));
-  const [authReady,setAuthReady]=useState(false);
+  const studentHomePreviewHash = typeof window !== 'undefined' && window.location.hash.startsWith('#/student-home');
+  const previewStudentSession: StudentSession | null = studentHomePreviewHash ? {
+    userId: 'student_home_preview',
+    role: 'STUDENT',
+    studentName: 'น้องกล้าหาญ (Alex)',
+    classRoomId: 'P6-1',
+    avatarVisualId: DEFAULT_PROFILE.avatarVisualId || 'BOY_WIZARD',
+    heroId: DEFAULT_PROFILE.heroId || 'CHRONOMANCER',
+    profile: { ...DEFAULT_PROFILE, heroName: 'น้องกล้าหาญ (Alex)' },
+    loginTimestamp: Date.now(),
+  } : null;
+  const [profile, setProfile] = useState<PlayerProfile>(previewStudentSession?.profile || DEFAULT_PROFILE);
+  const [currentScreen, setCurrentScreen] = useState<AppScreen>(()=>studentHomePreviewHash?'STUDENT_HOME':entryScreen(window.location.pathname));
+  const [authReady,setAuthReady]=useState(studentHomePreviewHash);
   const returnToLanding=()=>{window.history.replaceState(null,'','/');setCurrentScreen('LANDING');};
   const enterAdmin=()=>{if(window.location.pathname!=='/admin')window.history.pushState(null,'','/admin');setCurrentScreen('ADMIN_CONSOLE');};
-  useEffect(()=>{const changed=()=>setCurrentScreen(entryScreen(window.location.pathname));window.addEventListener('popstate',changed);return()=>window.removeEventListener('popstate',changed);},[]);
+  const openStudentHomePreview = () => {
+    const studentSess: StudentSession = {
+      userId: 'student_home_preview',
+      role: 'STUDENT',
+      studentName: 'น้องกล้าหาญ (Alex)',
+      classRoomId: 'P6-1',
+      avatarVisualId: DEFAULT_PROFILE.avatarVisualId || 'BOY_WIZARD',
+      heroId: DEFAULT_PROFILE.heroId || 'CHRONOMANCER',
+      profile: { ...DEFAULT_PROFILE, heroName: 'น้องกล้าหาญ (Alex)' },
+      loginTimestamp: Date.now(),
+    };
+    setSession(studentSess);
+    setProfile(studentSess.profile);
+    setLoadedOwner(studentSess.userId);
+    setProgressError('');
+    setCurrentScreen('STUDENT_HOME');
+  };
+  useEffect(()=>{
+    const changed=()=>{
+      if(window.location.hash==='#/student-home') { openStudentHomePreview(); return; }
+      setCurrentScreen(entryScreen(window.location.pathname));
+    };
+    window.addEventListener('popstate',changed);
+    window.addEventListener('hashchange',changed);
+    return()=>{window.removeEventListener('popstate',changed);window.removeEventListener('hashchange',changed);};
+  },[]);
   useEffect(()=>{if(currentScreen==='ADMIN_CONSOLE'&&entryScreen(window.location.pathname)!=='ADMIN_CONSOLE')window.history.replaceState(null,'','/admin');},[currentScreen]);
   const [isLoading, setIsLoading] = useState<boolean>(true);
 
@@ -132,9 +139,11 @@ export const App: React.FC = () => {
   // Selected Stage / Prep state
   const [selectedPrepStageId, setSelectedPrepStageId] = useState<string>('D1');
   const [activeTutorLesson, setActiveTutorLesson] = useState<TutorLesson>(getTutorLessonForStage('D1'));
+  const [tutorResult,setTutorResult]=useState<StageSessionResult|null>(null);
 
   // Drill state
   const [activeDrillConfig, setActiveDrillConfig] = useState<DrillConfig | null>(null);
+  const [activityOrigin, setActivityOrigin] = useState<ActivityOrigin>('MAP');
 
   // Dojo state
   const [activeDojoStageId, setActiveDojoStageId] = useState<string>('D1');
@@ -162,11 +171,11 @@ export const App: React.FC = () => {
   const [trialQuestions, setTrialQuestions] = useState<QuestionItem[]>([]);
 
   // Auth & Session state
-  const [session, setSession] = useState<UserSession | null>(authService.getCurrentSession());
-  const [loadedOwner, setLoadedOwner] = useState<string | null>(null);
+  const [session, setSession] = useState<UserSession | null>(previewStudentSession || authService.getCurrentSession());
+  const [loadedOwner, setLoadedOwner] = useState<string | null>(previewStudentSession?.userId || null);
   const [progressError, setProgressError] = useState('');
   const [loadAttempt, setLoadAttempt] = useState(0);
-  const realMode = authSession.getAdapterMode() === 'supabase';
+  const realMode = authSession.getAdapterMode() === 'supabase' && !studentHomePreviewHash;
   const storage = useMemo(() => {
     if (!session) return null;
     if (realMode && session.role === 'STUDENT') {
@@ -213,6 +222,10 @@ export const App: React.FC = () => {
   // Load saved profile on mount
   useEffect(() => {
     async function init() {
+      if (studentHomePreviewHash) {
+        setIsLoading(false);
+        return;
+      }
       let restoredSession:UserSession|null=null;
       try{restoredSession=await authService.restoreSession();}catch{/* Restoration failure must not authorize Admin. */}
       setSession(restoredSession);
@@ -220,14 +233,24 @@ export const App: React.FC = () => {
       setAuthReady(true);
 
       // Check URL hash for fast inspection routing
-      if (typeof window !== 'undefined' && entryScreen(window.location.pathname)==='LANDING' && authSession.getAdapterMode() === 'mock') {
-        const hash = window.location.hash;
+      const hash = typeof window !== 'undefined' ? window.location.hash : '';
+      if (hash === '#/student-home') {
+        openStudentHomePreview();
+      } else if (hash === '#/tutor-preview') {
+        setCurrentScreen('TUTOR_CATALOG');
+      } else if (hash === '#/boss-preview') {
+        setActiveBossId('BOSS-1');
+        setBossMode('CHALLENGE');
+        setBossPhaseId('PHASE_1');
+        setCurrentScreen('BOSS_PREVIEW');
+      } else if (typeof window !== 'undefined' && entryScreen(window.location.pathname)==='LANDING' && authSession.getAdapterMode() === 'mock') {
         if (hash === '#/professor-console') {
           setCurrentScreen('TEACHER_BATTLE_CONSOLE');
         } else if (hash === '#/hero-select') {
           setCurrentScreen('HERO_SELECT');
         } else if (hash === '#/login') {
           setCurrentScreen('LOGIN');
+
         } else if (hash === '#/battle') {
           // Initialize mock active battle for visual inspection
           const mockBRoom: BattleRoom = {
@@ -300,7 +323,9 @@ export const App: React.FC = () => {
       avatarGender: gender,
       heroName,
     };
-    await updateProfile(updated);
+    if (!storage || !session || loadedOwner !== session.userId) throw new Error('Player progress is not loaded');
+    await storage.saveProfile(updated);
+    setProfile(updated);
     setCurrentScreen('MAP');
   };
 
@@ -312,14 +337,22 @@ export const App: React.FC = () => {
   };
 
   // Open Tutor Room directly
-  const handleOpenTutor = (stageId: string = 'D1') => {
+  const handleOpenTutor = (stageId?: string) => {
+    if (!stageId) { setCurrentScreen('TUTOR_CATALOG'); return; }
     setSelectedPrepStageId(stageId);
     setActiveTutorLesson(getTutorLessonForStage(stageId));
-    setCurrentScreen('TUTOR_ROOM');
+    setCurrentScreen('TUTOR_OVERVIEW');
+  };
+
+  const startTutorPractice=()=>{
+    setActivityOrigin('TUTOR_ROOM');
+    setActiveDrillConfig({type:'QUICK_DRILL',title:`Tutor Practice · ${activeTutorLesson.thaiTitle}`,questions:getTutorPracticeQuestions(activeTutorLesson.stageId)});
+    setCurrentScreen('TUTOR_PRACTICE');
   };
 
   // Open Drill Center directly or with preconfigured drill
-  const handleOpenDrill = (drillType: string = 'QUICK_DRILL') => {
+  const handleOpenDrill = (drillType: string = 'QUICK_DRILL', origin: ActivityOrigin = 'MAP') => {
+    setActivityOrigin(origin);
     const dSession = generateDrillSession(drillType as any, profile);
     setActiveDrillConfig(dSession);
     setCurrentScreen('DRILL_SESSION');
@@ -327,6 +360,7 @@ export const App: React.FC = () => {
 
   // Start Daily Quest session
   const handleStartDailyQuest = () => {
+    setActivityOrigin('STUDENT_HOME');
     const qSession = generateDailyQuestSession(profile);
     const combinedQuestions = [
       ...qSession.warmUpQuestions,
@@ -506,11 +540,11 @@ export const App: React.FC = () => {
   }
   if (currentScreen === 'STAFF_LOGIN') {
     if (!realMode) return <main className="min-h-screen bg-slate-100 text-slate-900 p-8"><p role="alert">Staff/Admin entry requires real Supabase authentication. Demo access is unavailable.</p><button className="min-h-[44px] border rounded px-4 mt-4" onClick={() => setCurrentScreen('LANDING')}>Return to landing</button></main>;
-    return <LoginScreen initialRole="ADMIN" lockRole mode="ALL" onBackToLanding={() => setCurrentScreen('LANDING')}
+    return <LoginScreen initialRole="ADMIN" lockRole mode="ALL" onBackToLanding={returnToLanding}
       onLoginSuccess={newSession => { setSession(newSession); setCurrentScreen('ADMIN_CONSOLE'); }} />;
   }
 
-  if (progressError && currentScreen!=='LANDING') {
+  if (progressError && currentScreen!=='LANDING' && !studentHomePreviewHash) {
     return <div className="min-h-screen bg-slate-950 text-slate-100 p-8" role="alert">
       <p>{progressError}</p>
       <button className="min-h-[44px] p-3" onClick={async () => {
@@ -529,7 +563,8 @@ export const App: React.FC = () => {
       }}>ออกจากระบบ</button>
     </div>;
   }
-  if (currentScreen!=='LANDING' && (isLoading || (session && loadedOwner !== session.userId))) {
+  const isStudentHomePreview = typeof window !== 'undefined' && window.location.hash.startsWith('#/student-home');
+  if (currentScreen!=='LANDING' && !isStudentHomePreview && (isLoading || (session && loadedOwner !== session.userId))) {
     return (
       <div className="min-h-screen bg-slate-950 flex items-center justify-center text-cyan-400 font-bold font-sans">
         กำลังโหลดดินแดนแห่งตัวเลข Klapanya Math Quest...
@@ -580,9 +615,9 @@ export const App: React.FC = () => {
         mode="STUDENT"
         onLoginSuccess={(newSession) => {
           setSession(newSession);
-          setCurrentScreen(realMode && authSession.getCurrentUser()?.role === 'ADMIN' ? 'ADMIN_CONSOLE' : newSession.role==='TEACHER'?'TEACHER_HOME':'STUDENT_HOME');
+          setCurrentScreen(realMode && authSession.getCurrentUser()?.role === 'ADMIN' ? 'ADMIN_CONSOLE' : postLoginDestination(newSession.role));
         }}
-        onBackToLanding={() => setCurrentScreen('LANDING')}
+        onBackToLanding={returnToLanding}
       />
     );
   }
@@ -593,14 +628,14 @@ export const App: React.FC = () => {
         mode="TEACHER"
         onLoginSuccess={(newSession) => {
           setSession(newSession);
-          setCurrentScreen(realMode && authSession.getCurrentUser()?.role === 'ADMIN' ? 'ADMIN_CONSOLE' : newSession.role==='TEACHER'?'TEACHER_HOME':'STUDENT_HOME');
+          setCurrentScreen(realMode && authSession.getCurrentUser()?.role === 'ADMIN' ? 'ADMIN_CONSOLE' : postLoginDestination(newSession.role));
         }}
-        onBackToLanding={() => setCurrentScreen('LANDING')}
+        onBackToLanding={returnToLanding}
       />
     );
   }
 
-  if (currentScreen === 'LOGIN' || (!session && currentScreen !== 'HERO_SELECT')) {
+  if (currentScreen === 'LOGIN' || (!session && !['HERO_SELECT', 'TUTOR_CATALOG', 'TUTOR_OVERVIEW', 'TUTOR_ROOM', 'BOSS_PREVIEW'].includes(currentScreen))) {
     return (
       <LoginScreen
         mode="ALL"
@@ -614,7 +649,7 @@ export const App: React.FC = () => {
             setCurrentScreen('STUDENT_HOME');
           }
         }}
-        onBackToLanding={() => setCurrentScreen('LANDING')}
+        onBackToLanding={returnToLanding}
       />
     );
   }
@@ -636,8 +671,12 @@ export const App: React.FC = () => {
             }
             setCurrentScreen('MAP');
           }}
-          onNavigateToTutor={(stgId) => handleOpenTutor(stgId || 'D1')}
-          onNavigateToDrill={(drillType) => handleOpenDrill(drillType as any)}
+          onNavigateToTutor={(stgId) => { setActivityOrigin('STUDENT_HOME'); handleOpenTutor(stgId); }}
+          onNavigateToDrill={(drillType) => {
+            setActivityOrigin('STUDENT_HOME');
+            if (drillType) handleOpenDrill(drillType, 'STUDENT_HOME');
+            else setCurrentScreen('DRILL_CENTER');
+          }}
           onNavigateToDailyQuest={() => handleStartDailyQuest()}
           onNavigateToBattle={() => setCurrentScreen('BATTLE_LOBBY')}
           onOpenCodex={() => setShowCodexModal(true)}
@@ -653,21 +692,26 @@ export const App: React.FC = () => {
       )}
 
       {/* 0b. Teacher Home Screen */}
-      {currentScreen === 'TEACHER_HOME' && session && session.role === 'TEACHER' && realMode && (
-        <main className="max-w-6xl mx-auto p-4 md:p-8"><PersistedProgressHome key={session.userId} owner={session.userId} teacher onLogout={async()=>{await authService.logout();setSession(null);setCurrentScreen('LOGIN');}}/></main>
-      )}
-      {currentScreen === 'TEACHER_HOME' && session && session.role === 'TEACHER' && !realMode && (
+      {currentScreen === 'TEACHER_HOME' && session && session.role === 'TEACHER' && (
         <TeacherHomeScreen
           session={session as TeacherSession}
-          onPreviewStage={(stgId) => handleSelectStage(stgId)}
-          onPreviewTutor={(stgId) => handleOpenTutor(stgId)}
-          onOpenLiveBattleConsole={() => setCurrentScreen('TEACHER_BATTLE_CONSOLE')}
-          onOpenReviewHub={() => setCurrentScreen('REVIEW_HUB')}
+          onOpenAssignments={() => setCurrentScreen('TEACHER_ASSIGNMENTS')}
+          onOpenBattleLobby={() => setCurrentScreen('BATTLE_LOBBY')}
+          onOpenBattleConsole={() => setCurrentScreen('TEACHER_BATTLE_CONSOLE')}
           onLogout={async () => {
             await authService.logout();
             setSession(null);
             setCurrentScreen('LOGIN');
           }}
+        />
+      )}
+
+      {currentScreen === 'TEACHER_ASSIGNMENTS' && session && session.role === 'TEACHER' && (
+        <TeacherAssignmentsScreen
+          session={session as TeacherSession}
+          onBack={() => setCurrentScreen('TEACHER_HOME')}
+          onPreviewStage={(stageId) => { setActivityOrigin('TEACHER_ASSIGNMENTS'); handleSelectStage(stageId); }}
+          onPreviewTutor={(stageId) => { setActivityOrigin('TEACHER_ASSIGNMENTS'); handleOpenTutor(stageId); }}
         />
       )}
 
@@ -704,7 +748,7 @@ export const App: React.FC = () => {
           room={activeBattleRoom}
           player={activeBattlePlayer}
           profile={profile}
-          onStartRecoveryDrill={() => handleOpenDrill('RECOVERY_DRILL')}
+          onStartRecoveryDrill={() => handleOpenDrill('RECOVERY_DRILL', session?.role === 'TEACHER' ? 'TEACHER_ASSIGNMENTS' : 'STUDENT_HOME')}
           onReturnHome={() => setCurrentScreen(session?.role === 'TEACHER' ? 'TEACHER_HOME' : 'STUDENT_HOME')}
           onRematch={() => setCurrentScreen('BATTLE_LOBBY')}
         />
@@ -749,21 +793,16 @@ export const App: React.FC = () => {
         <AvatarHeroSelectScreen
           currentProfile={profile}
           onConfirmCharacter={handleConfirmCharacter}
+          onBack={() => setCurrentScreen('STUDENT_HOME')}
         />
       )}
 
       {/* Arctic Hero Select (Master Approved Template) */}
       {currentScreen === 'HERO_SELECT' && (
-        <ArcticHeroSelectScreen
-          currentHeroId={profile.heroId}
-          playerName={profile.heroName || (session && session.role === 'STUDENT' ? (session as StudentSession).studentName : 'ผู้กล้าคณิตศาสตร์')}
-          onConfirmHero={async (hId, hName) => {
-            await updateProfile({ ...profile, heroId: hId, heroName: hName });
-            setCurrentScreen('MAP');
-          }}
-          onBackToTerritory={() => {
-            setCurrentScreen('LANDING');
-          }}
+        <AvatarHeroSelectScreen
+          currentProfile={profile}
+          onConfirmCharacter={handleConfirmCharacter}
+          onBack={() => setCurrentScreen('LANDING')}
         />
       )}
 
@@ -771,6 +810,7 @@ export const App: React.FC = () => {
       {currentScreen === 'MAP' && (
         <MapScreen
           profile={profile}
+          onGoHome={() => setCurrentScreen('STUDENT_HOME')}
           onEnterStage={(id) => { setActiveDojoStageId(id); handleOpenStageDetail(id); }}
           onEnterShrine={(id, mode, size) => { setActiveShrineStageId(id); setShrineMode(mode); setShrineRunSize(size); setCurrentScreen('SHRINE_BATTLE'); }}
           onEnterGateway={(id, mode) => { setActiveGatewayStageId(id); setGatewayMode(mode); setCurrentScreen('GATEWAY_EXAM'); }}
@@ -782,7 +822,7 @@ export const App: React.FC = () => {
           onOpenInventory={() => setCurrentScreen('SKILL_INVENTORY')}
           onOpenMarket={() => setShowMarketModal(true)}
           onOpenCodex={(chId) => { setCodexInitialChapter(chId || 1); setShowCodexModal(true); }}
-          onOpenDrillCenter={() => setCurrentScreen('DRILL_CENTER')}
+          onOpenDrillCenter={() => { setActivityOrigin('MAP'); setCurrentScreen('DRILL_CENTER'); }}
           onOpenSkillInventory={() => setCurrentScreen('SKILL_INVENTORY')}
           onOpenStageDetail={handleOpenStageDetail}
           onSelectPet={async (petId) => { await updateProfile({ ...profile, activePetId: petId }); }}
@@ -806,23 +846,43 @@ export const App: React.FC = () => {
           linkedCodexChapterId={1}
           profile={profile}
           onLearnFirst={() => setCurrentScreen('TUTOR_ROOM')}
-          onDrill={() => setCurrentScreen('DRILL_CENTER')}
+          onDrill={() => { setActivityOrigin(activityOrigin === 'TEACHER_ASSIGNMENTS' ? 'TEACHER_ASSIGNMENTS' : 'MAP'); setCurrentScreen('DRILL_CENTER'); }}
           onPlayPractice={() => setCurrentScreen('DOJO_BATTLE')}
           onPlayChallenge={() => setCurrentScreen('DOJO_BATTLE')}
           onOpenCodexChapter={(chId) => { setCodexInitialChapter(chId); setShowCodexModal(true); }}
-          onBack={() => setCurrentScreen('MAP')}
+          onBack={() => setCurrentScreen(activityReturnDestination(activityOrigin, session?.role))}
         />
       )}
 
-      {/* 4. Tutor Room Screen (7-step instruction) */}
+      {/* Tutor 1/5: searchable topic catalog */}
+      {currentScreen === 'TUTOR_CATALOG' && <TutorCatalogScreen onBack={() => setCurrentScreen(activityOrigin === 'TEACHER_ASSIGNMENTS' ? 'TEACHER_ASSIGNMENTS' : 'STUDENT_HOME')} onSelectLesson={handleOpenTutor} />}
+
+      {/* Tutor 2/5: topic overview */}
+      {currentScreen === 'TUTOR_OVERVIEW' && <TutorTopicOverviewScreen lesson={activeTutorLesson} onBack={() => setCurrentScreen(activityOrigin === 'TEACHER_ASSIGNMENTS' ? 'TEACHER_ASSIGNMENTS' : 'TUTOR_CATALOG')} onStart={() => setCurrentScreen('TUTOR_ROOM')} />}
+
+      {/* Tutor 3/5: 7-step lesson */}
       {currentScreen === 'TUTOR_ROOM' && (
         <TutorRoomScreen
           lesson={activeTutorLesson}
-          onFinishLessonAndStartDrill={() => setCurrentScreen('DRILL_CENTER')}
+          onFinishLessonAndStartDrill={startTutorPractice}
           onFinishLessonAndPlayStage={() => setCurrentScreen('DOJO_BATTLE')}
-          onBack={() => setCurrentScreen('STAGE_DETAIL')}
+          onBack={() => setCurrentScreen('TUTOR_OVERVIEW')}
         />
       )}
+
+      {/* Tutor 4/5: quiet practice sheet, not a battle arena */}
+      {currentScreen === 'TUTOR_PRACTICE' && activeDrillConfig && (
+        <TutorPracticeScreen
+          lesson={activeTutorLesson}
+          questions={activeDrillConfig.questions}
+          profile={profile}
+          onFinish={(res) => { setTutorResult(res); setCurrentScreen('TUTOR_RESULT'); }}
+          onBack={() => setCurrentScreen('TUTOR_ROOM')}
+        />
+      )}
+
+      {/* Tutor 5/5: standalone result */}
+      {currentScreen === 'TUTOR_RESULT' && tutorResult && <TutorResultScreen lesson={activeTutorLesson} result={tutorResult} onReview={() => setCurrentScreen('TUTOR_ROOM')} onRetry={startTutorPractice} onChooseTopic={() => setCurrentScreen('TUTOR_CATALOG')} onHome={() => setCurrentScreen('STUDENT_HOME')} />}
 
       {/* 5. Drill Center Screen */}
       {currentScreen === 'DRILL_CENTER' && (
@@ -832,7 +892,7 @@ export const App: React.FC = () => {
             setActiveDrillConfig(dConfig);
             setCurrentScreen('DRILL_SESSION');
           }}
-          onBack={() => setCurrentScreen('MAP')}
+          onBack={() => setCurrentScreen(activityReturnDestination(activityOrigin, session?.role))}
         />
       )}
 
@@ -846,9 +906,9 @@ export const App: React.FC = () => {
           isExamMode={false}
           onFinishSession={async (res) => {
             await handleFinishSessionGeneric(res);
-            setCurrentScreen('MAP');
+            setCurrentScreen(activityReturnDestination(activityOrigin, session?.role));
           }}
-          onExitStage={() => setCurrentScreen('DRILL_CENTER')}
+          onExitStage={() => setCurrentScreen(activityReturnDestination(activityOrigin, session?.role))}
         />
       )}
 
@@ -934,6 +994,10 @@ export const App: React.FC = () => {
         />
       )}
 
+      {/* Full-screen safe Boss preview: real player UI with persistence disabled. */}
+      {currentScreen === 'BOSS_PREVIEW' && (
+        <ArenaTemplatePreviewScreen />
+      )}
       {/* Boss Battle */}
       {currentScreen === 'BOSS_BATTLE' && (
         <BossArenaScreen
